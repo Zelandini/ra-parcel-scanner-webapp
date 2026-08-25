@@ -140,3 +140,36 @@ def find_active_alias_resident_ids(alias):
     }
 
     return sorted(resident_ids)
+
+
+def get_active_aliases_for_resident(resident_id):
+    """Return active alias labels for one resident."""
+    searched_id = str(resident_id or "").strip()
+
+    if not searched_id:
+        return []
+
+    documents = (
+        get_firestore_database()
+        .collection("aliases")
+        .where(
+            filter=FieldFilter(
+                "resident_id",
+                "==",
+                searched_id,
+            )
+        )
+        .stream()
+    )
+
+    aliases = {
+        str(data.get("alias", "")).strip()
+        for document in documents
+        for data in [document.to_dict() or {}]
+        if (
+            data.get("active") is True
+            and str(data.get("alias", "")).strip()
+        )
+    }
+
+    return sorted(aliases, key=str.casefold)

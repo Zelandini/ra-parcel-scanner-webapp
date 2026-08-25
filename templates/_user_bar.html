@@ -1,0 +1,25 @@
+<header class="user-bar">
+    <a class="brand-link" href="{{ url_for('home') }}">
+        ParcelMatch
+    </a>
+
+    <nav class="main-nav" aria-label="Main navigation">
+        <a href="{{ url_for('home') }}">Capture</a>
+        <a href="{{ url_for('batches_dashboard') }}">Batches</a>
+    </nav>
+
+    <div class="user-actions">
+        <span class="signed-in-name">{{ session.name }}</span>
+
+        <form method="POST" action="{{ url_for('logout') }}">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+            <button class="text-button" type="submit">
+                Sign out
+            </button>
+        </form>
+    </div>
+</header>

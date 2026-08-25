@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/styles.css') }}"
+    >
+    <title>Active batches · ParcelMatch</title>
+</head>
+<body>
+    <main class="app-shell desktop-shell">
+        {% include "_user_bar.html" %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="message flash-{{ category }}" role="status">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endwith %}
+
+        <div class="section-heading dashboard-heading">
+            <div>
+                <p class="eyebrow">Desktop workspace</p>
+                <h1>Active parcel batches</h1>
+                <p class="description">
+                    Open a batch to review matches, correct OCR information,
+                    and save resident aliases.
+                </p>
+            </div>
+            <a class="primary-button compact-button" href="{{ url_for('home') }}">
+                New batch
+            </a>
+        </div>
+
+        {% if batches %}
+            <div class="dashboard-batch-list">
+                {% for batch in batches %}
+                    <article
+                        class="dashboard-batch-card"
+                        data-batch-status="{{ batch.status }}"
+                    >
+                        <div class="batch-card-main">
+                            <span class="status-badge status-{{ batch.status }}">
+                                {{ batch.status|replace('_', ' ')|title }}
+                            </span>
+                            <h2>{{ batch.created_at|batch_time }}</h2>
+                            <p>
+                                {{ batch.ready_count }} ready ·
+                                {{ batch.failed_count }} failed ·
+                                {{ batch.reviewed_count }} reviewed
+                            </p>
+                        </div>
+
+                        <div class="batch-progress-copy">
+                            <strong>
+                                {{ batch.item_count }}/{{ batch.total_items }} processed
+                            </strong>
+                            <span>
+                                {{ batch.confirmed_count }} human-confirmed
+                            </span>
+                        </div>
+
+                        <a
+                            class="primary-button compact-button"
+                            href="{{ url_for('review_batch', batch_id=batch.id) }}"
+                        >
+                            Review batch
+                        </a>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <section class="empty-state">
+                <h2>No active batches</h2>
+                <p>Capture a parcel batch from your phone to begin.</p>
+                <a class="primary-button compact-button" href="{{ url_for('home') }}">
+                    Capture parcels
+                </a>
+            </section>
+        {% endif %}
+    </main>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
