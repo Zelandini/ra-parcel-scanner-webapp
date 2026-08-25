@@ -2,25 +2,105 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/styles.css') }}"
+    >
 
     <title>ParcelMatch</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
     <main class="page">
         <section class="scanner-card">
+            <p class="eyebrow">Parcel intake</p>
+
             <h1 class="product-name">ParcelMatch</h1>
 
             <p class="description">
-                Scan parcel labels and match them with accommodation residents.
+                Photograph parcel labels and match them with accommodation
+                residents.
             </p>
 
-            <button class="upload-button" type="button">
-                Upload parcel images
-            </button>
+            {% if error %}
+                <div class="message error-message" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            {% if uploaded_count %}
+                <div class="message success-message" role="status">
+                    {{ uploaded_count }}
+                    parcel image{% if uploaded_count != 1 %}s{% endif %}
+                    successfully received.
+                </div>
+            {% endif %}
+
+            <form
+                class="upload-form"
+                method="POST"
+                enctype="multipart/form-data"
+            >
+                <label
+                    class="upload-area"
+                    for="parcel-images"
+                >
+                    <span class="upload-title">
+                        Choose parcel images
+                    </span>
+
+                    <span class="upload-help">
+                        Take photographs or select existing images
+                    </span>
+
+                    <span class="upload-formats">
+                        JPG, PNG, WEBP or HEIC · Maximum 20 images
+                    </span>
+                </label>
+
+                <input
+                    id="parcel-images"
+                    class="file-input"
+                    type="file"
+                    name="parcel_images"
+                    accept="image/jpeg,image/png,image/webp,.heic,.heif"
+                    multiple
+                    required
+                >
+
+                <p
+                    id="selected-file-count"
+                    class="selected-file-count"
+                    aria-live="polite"
+                >
+                    No images selected
+                </p>
+
+                <button
+                    id="submit-button"
+                    class="upload-button"
+                    type="submit"
+                    disabled
+                >
+                    Process parcel images
+                </button>
+            </form>
+
+            <aside class="privacy-message">
+                Parcel labels contain personal information. Only upload images
+                for authorised accommodation work.
+            </aside>
         </section>
     </main>
+
+    <script
+        src="{{ url_for('static', filename='js/upload.js') }}"
+    ></script>
 </body>
 </html>

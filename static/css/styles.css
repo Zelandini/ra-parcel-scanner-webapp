@@ -1,0 +1,192 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    background-color: #f4f7f5;
+    color: #17211c;
+
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.page {
+    min-height: 100vh;
+    padding: 24px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scanner-card {
+    width: 100%;
+    max-width: 480px;
+
+    padding: 32px 24px;
+
+    background-color: white;
+    border: 1px solid #dce4df;
+    border-radius: 16px;
+
+    box-shadow: 0 12px 30px rgba(24, 60, 43, 0.08);
+}
+
+.product-name {
+    margin: 0 0 12px;
+
+    color: #176b4d;
+    font-size: 2rem;
+}
+
+.description {
+    margin: 0 0 28px;
+
+    color: #5f6e66;
+    line-height: 1.6;
+}
+
+.upload-button {
+    width: 100%;
+    min-height: 52px;
+
+    border: none;
+    border-radius: 10px;
+
+    background-color: #176b4d;
+    color: white;
+
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.upload-button:hover {
+    background-color: #10543c;
+}
+
+.upload-button:focus-visible {
+    outline: 3px solid #8cc7aa;
+    outline-offset: 3px;
+}
+
+@media (min-width: 768px) {
+    .scanner-card {
+        padding: 40px;
+    }
+}
+.eyebrow {
+    margin: 0 0 8px;
+
+    color: #176b4d;
+
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.upload-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.upload-area {
+    min-height: 180px;
+    padding: 24px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    border: 2px dashed #a8b9af;
+    border-radius: 12px;
+
+    background-color: #f8fbf9;
+    text-align: center;
+    cursor: pointer;
+}
+
+.upload-area:hover {
+    border-color: #176b4d;
+    background-color: #f0f8f4;
+}
+
+.upload-title {
+    color: #176b4d;
+    font-weight: 700;
+}
+
+.upload-help {
+    color: #526159;
+    font-size: 0.9rem;
+}
+
+.upload-formats {
+    color: #7b8981;
+    font-size: 0.75rem;
+}
+
+.file-input {
+    position: absolute;
+
+    width: 1px;
+    height: 1px;
+
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+.selected-file-count {
+    margin: 0;
+
+    color: #526159;
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.upload-button:disabled {
+    background-color: #a9b7b0;
+    cursor: not-allowed;
+}
+
+.message {
+    margin-bottom: 20px;
+    padding: 12px 14px;
+
+    border-radius: 8px;
+
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.error-message {
+    border: 1px solid #e5a5a5;
+
+    background-color: #fff1f1;
+    color: #932e2e;
+}
+
+.success-message {
+    border: 1px solid #a7d5bd;
+
+    background-color: #eff9f4;
+    color: #155c42;
+}
+
+.privacy-message {
+    margin-top: 20px;
+    padding: 12px;
+
+    border-radius: 8px;
+
+    background-color: #eff6f2;
+    color: #526159;
+
+    font-size: 0.75rem;
+    line-height: 1.5;
+}
