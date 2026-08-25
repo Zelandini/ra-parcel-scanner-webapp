@@ -2,238 +2,52 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link
         rel="stylesheet"
         href="{{ url_for('static', filename='css/styles.css') }}"
     >
-
-    <title>ParcelMatch</title>
+    <title>Capture parcels · ParcelMatch</title>
 </head>
-
 <body>
-    <main class="page">
-    <div class="user-bar">
+    <main class="app-shell capture-shell">
+        {% include "_user_bar.html" %}
+
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div
-                        class="message flash-{{ category }}"
-                        role="status"
-                    >
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
+            {% for category, message in messages %}
+                <div class="message flash-{{ category }}" role="status">
+                    {{ message }}
+                </div>
+            {% endfor %}
         {% endwith %}
-        <div>
-            <span class="user-label">Signed in as</span>
-            <strong>{{ session.name }}</strong>
-        </div>
 
-        <form method="POST" action="{{ url_for('logout') }}">
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token() }}"
-            >
-            <button class="logout-button" type="submit">
-                Sign out
-            </button>
-        </form>
-    </div>
-        <section class="scanner-card">
-            <p class="eyebrow">Parcel intake</p>
-
-            <h1 class="product-name">ParcelMatch</h1>
-
+        <section class="capture-card">
+            <p class="eyebrow">Mobile parcel intake</p>
+            <h1>Capture a parcel batch</h1>
             <p class="description">
-                Photograph parcel labels and match them with accommodation
-                residents.
+                Select the parcel photographs now, then review the extracted
+                information from any desktop after processing finishes.
             </p>
 
-            {% if error %}
-                <div class="message error-message" role="alert">
-                    {{ error }}
-                </div>
-            {% endif %}
-
-            {% if parcel_results %}
-                <section class="parcel-results">
-                    <h2>Resident matches</h2>
-
-                    {% for result in parcel_results %}
-                        <article class="parcel-result">
-                            <h3>{{ result.filename }}</h3>
-
-                            {% if not result.success %}
-                                <div class="result-error">
-                                    {{ result.error }}
-                                </div>
-
-                            {% else %}
-                                <div class="detected-details">
-                                    <h4>Detected parcel information</h4>
-
-                                    <dl class="result-details">
-                                        <div>
-                                            <dt>Name</dt>
-                                            <dd>
-                                                {{ result.parcel.recipient_name
-                                                   or "Not detected" }}
-                                            </dd>
-                                        </div>
-
-                                        <div>
-                                            <dt>Phone</dt>
-                                            <dd>
-                                                {{ result.parcel.phone_number
-                                                   or "Not detected" }}
-                                            </dd>
-                                        </div>
-
-                                        <div>
-                                            <dt>Room</dt>
-                                            <dd>
-                                                {{ result.parcel.room
-                                                   or "Not detected" }}
-                                            </dd>
-                                        </div>
-
-                                        <div>
-                                            <dt>OCR confidence</dt>
-                                            <dd>
-                                                {{ result.parcel.ocr_confidence|title }}
-                                            </dd>
-                                        </div>
-                                    </dl>
-                                </div>
-
-                                <div class="match-section">
-                                    <span class="status-badge status-{{ result.match.status }}">
-                                        {{ result.match.status
-                                           |replace("_", " ")
-                                           |title }}
-                                    </span>
-
-                                    <p class="match-reason">
-                                        {{ result.match.reason }}
-                                    </p>
-
-                                    {% if result.match.resident %}
-                                        <dl class="result-details resident-details">
-                                            <div>
-                                                <dt>Resident</dt>
-                                                <dd>
-                                                    {{ result.match.resident.full_name }}
-                                                </dd>
-                                            </div>
-
-                                            <div>
-                                                <dt>Student ID</dt>
-                                                <dd>
-                                                    {{ result.match.resident.student_id }}
-                                                </dd>
-                                            </div>
-
-                                            <div>
-                                                <dt>Registered room</dt>
-                                                <dd>
-                                                    {{ result.match.resident.room }}
-                                                </dd>
-                                            </div>
-                                        </dl>
-                                    {% endif %}
-
-                                    {% if result.match.evidence %}
-                                        <details class="match-evidence">
-                                            <summary>
-                                                Why was this suggested?
-                                            </summary>
-
-                                            <ul>
-                                                {% for item in result.match.evidence %}
-                                                    <li>{{ item }}</li>
-                                                {% endfor %}
-                                            </ul>
-                                        </details>
-                                    {% endif %}
-
-                                    {% if result.can_save_alias %}
-                                        <form
-                                            class="alias-form"
-                                            method="POST"
-                                            action="{{ url_for('create_alias') }}"
-                                        >
-                                            <input
-                                                type="hidden"
-                                                name="csrf_token"
-                                                value="{{ csrf_token() }}"
-                                            >
-
-                                            <input
-                                                type="hidden"
-                                                name="resident_id"
-                                                value="{{ result.match.resident.student_id }}"
-                                            >
-
-                                            <input
-                                                type="hidden"
-                                                name="alias"
-                                                value="{{ result.parcel.recipient_name }}"
-                                            >
-
-                                            <p>
-                                                Does this parcel name belong to
-                                                <strong>
-                                                    {{ result.match.resident.full_name }}
-                                                </strong>?
-                                            </p>
-
-                                            <button
-                                                class="remember-alias-button"
-                                                type="submit"
-                                            >
-                                                Remember as alias
-                                            </button>
-                                        </form>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                        </article>
-                    {% endfor %}
-                </section>
-            {% endif %}
-
             <form
+                id="batch-upload-form"
                 class="upload-form"
-                method="POST"
-                enctype="multipart/form-data"
+                data-create-url="{{ url_for('api_create_batch') }}"
+                data-max-images="{{ max_images }}"
             >
                 <input
+                    id="csrf-token"
                     type="hidden"
-                    name="csrf_token"
                     value="{{ csrf_token() }}"
                 >
-                <label
-                    class="upload-area"
-                    for="parcel-images"
-                >
-                    <span class="upload-title">
-                        Choose parcel images
-                    </span>
 
+                <label class="upload-area" for="parcel-images">
+                    <span class="upload-title">Choose parcel images</span>
                     <span class="upload-help">
-                        Take photographs or select existing images
+                        Take photographs or choose them from your phone
                     </span>
-
                     <span class="upload-formats">
-                        JPG, PNG, WEBP or HEIC · Maximum 20 images
+                        JPG, PNG, WEBP or HEIC · Maximum {{ max_images }}
                     </span>
                 </label>
 
@@ -257,23 +71,96 @@
 
                 <button
                     id="submit-button"
-                    class="upload-button"
+                    class="primary-button"
                     type="submit"
                     disabled
                 >
-                    Process parcel images
+                    Process parcel batch
                 </button>
             </form>
 
+            <section
+                id="progress-panel"
+                class="progress-panel"
+                aria-live="polite"
+                hidden
+            >
+                <div class="progress-heading">
+                    <div>
+                        <p class="eyebrow">Processing batch</p>
+                        <h2 id="progress-title">Preparing images…</h2>
+                    </div>
+                    <strong id="progress-fraction">0 of 0</strong>
+                </div>
+
+                <div
+                    class="progress-track"
+                    role="progressbar"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                >
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+
+                <p id="progress-summary" class="progress-summary">
+                    Waiting to begin…
+                </p>
+
+                <ol id="upload-status-list" class="upload-status-list"></ol>
+            </section>
+
+            <section id="ready-panel" class="ready-panel" hidden>
+                <div class="ready-icon" aria-hidden="true">✓</div>
+                <p class="eyebrow">Batch ready</p>
+                <h2 id="ready-title">Ready for human checking</h2>
+                <p id="ready-summary" class="description"></p>
+                <a id="review-batch-link" class="primary-button" href="#">
+                    Open review dashboard
+                </a>
+            </section>
+
             <aside class="privacy-message">
-                Parcel labels contain personal information. Only upload images
-                for authorised accommodation work.
+                Original photographs are deleted after OCR. Temporary batch
+                results are visible only to the RA who created the batch.
             </aside>
         </section>
+
+        {% if active_batches %}
+            <section class="recent-batches">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Continue on desktop</p>
+                        <h2>Active batches</h2>
+                    </div>
+                    <a class="secondary-link" href="{{ url_for('batches_dashboard') }}">
+                        View all
+                    </a>
+                </div>
+
+                <div class="batch-grid">
+                    {% for batch in active_batches %}
+                        <a
+                            class="batch-summary-card"
+                            href="{{ url_for('review_batch', batch_id=batch.id) }}"
+                        >
+                            <span class="status-badge status-{{ batch.status }}">
+                                {{ batch.status|replace('_', ' ')|title }}
+                            </span>
+                            <strong>{{ batch.created_at|batch_time }}</strong>
+                            <span>
+                                {{ batch.item_count }} of {{ batch.total_items }} processed
+                            </span>
+                            <span>
+                                {{ batch.reviewed_count }} reviewed
+                            </span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
     </main>
 
-    <script
-        src="{{ url_for('static', filename='js/upload.js') }}"
-    ></script>
+    <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 </body>
 </html>
