@@ -5,19 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>ParcelMatch</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
-    <main>
-        <h1>ParcelMatch</h1>
+    <main class="page">
+        <section class="scanner-card">
+            <h1 class="product-name">ParcelMatch</h1>
 
-        <p>
-            Scan parcel labels and match them with accommodation residents.
-        </p>
+            <p class="description">
+                Scan parcel labels and match them with accommodation residents.
+            </p>
 
-        <button type="button">
-            Upload parcel images
-        </button>
+            <button class="upload-button" type="button">
+                Upload parcel images
+            </button>
+        </section>
     </main>
 </body>
 </html>
