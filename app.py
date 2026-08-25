@@ -1,4 +1,16 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from dotenv import load_dotenv
 from flask import Flask, render_template, request
+from google import genai
+from PIL import UnidentifiedImageError
+
+from services.image_processing import prepare_uploaded_image
+from services.parcel_reader import read_parcel
+
+
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -13,57 +25,138 @@ ALLOWED_EXTENSIONS = {
     "heif",
 }
 
+MAX_IMAGES = 20
+
 
 def allowed_file(filename):
     if "." not in filename:
         return False
 
     extension = filename.rsplit(".", 1)[1].lower()
+
     return extension in ALLOWED_EXTENSIONS
+
+
+def create_display_room(parcel):
+    """
+    Create one readable room value from Gemini's structured fields.
+    """
+    if parcel.raw_room_text:
+        return parcel.raw_room_text
+
+    room = parcel.room_number
+
+    if room and parcel.room_letter:
+        room = f"{room}{parcel.room_letter}"
+
+    if room and parcel.building_number:
+        room = f"{parcel.building_number}-{room}"
+
+    return room
 
 
 @app.route("/", methods=["GET", "POST"])
 def home():
     error = None
-    uploaded_count = None
+    parcel_results = []
 
     if request.method == "POST":
-        images = request.files.getlist("parcel_images")
-
         images = [
             image
-            for image in images
+            for image in request.files.getlist("parcel_images")
             if image and image.filename
         ]
 
         if not images:
             error = "Please select at least one parcel image."
 
-        elif len(images) > 20:
-            error = "You can upload a maximum of 20 images."
+        elif len(images) > MAX_IMAGES:
+            error = f"You can upload a maximum of {MAX_IMAGES} images."
 
         elif any(not allowed_file(image.filename) for image in images):
             error = "One or more files use an unsupported format."
 
         else:
-            uploaded_count = len(images)
+            try:
+                gemini_client = genai.Client()
 
-            # We are only validating the images at this stage.
-            # Nothing is permanently stored yet.
+                with TemporaryDirectory() as temporary_directory:
+                    for image in images:
+                        try:
+                            jpeg_path = prepare_uploaded_image(
+                                uploaded_file=image,
+                                temporary_directory=temporary_directory,
+                            )
+
+                            parcel = read_parcel(
+                                image_path=jpeg_path,
+                                client=gemini_client,
+                            )
+
+                            parcel_results.append({
+                                "filename": image.filename,
+                                "success": True,
+                                "recipient_name": (
+                                    parcel.recipient_full_name
+                                ),
+                                "phone_number": parcel.phone_number,
+                                "room": create_display_room(parcel),
+                                "building_number": (
+                                    parcel.building_number
+                                ),
+                                "room_number": parcel.room_number,
+                                "room_letter": parcel.room_letter,
+                                "tracking_number": (
+                                    parcel.tracking_number
+                                ),
+                                "confidence": parcel.confidence,
+                            })
+
+                        except (
+                            UnidentifiedImageError,
+                            OSError,
+                            ValueError,
+                        ) as image_error:
+                            parcel_results.append({
+                                "filename": image.filename,
+                                "success": False,
+                                "error": (
+                                    "The image could not be read: "
+                                    f"{image_error}"
+                                ),
+                            })
+
+                        except Exception as gemini_error:
+                            parcel_results.append({
+                                "filename": image.filename,
+                                "success": False,
+                                "error": (
+                                    "Gemini could not process this image: "
+                                    f"{gemini_error}"
+                                ),
+                            })
+
+                # Temporary images are deleted here.
+
+            except Exception as connection_error:
+                error = (
+                    "The Gemini service could not be started: "
+                    f"{connection_error}"
+                )
 
     return render_template(
         "index.html",
         error=error,
-        uploaded_count=uploaded_count,
+        parcel_results=parcel_results,
     )
 
 
 @app.errorhandler(413)
-def upload_too_large(error):
+def upload_too_large(_error):
     return render_template(
         "index.html",
         error="The selected images are too large. The maximum total is 50 MB.",
-        uploaded_count=None,
+        parcel_results=[],
     ), 413
 
 

@@ -34,12 +34,60 @@
                 </div>
             {% endif %}
 
-            {% if uploaded_count %}
-                <div class="message success-message" role="status">
-                    {{ uploaded_count }}
-                    parcel image{% if uploaded_count != 1 %}s{% endif %}
-                    successfully received.
-                </div>
+            {% if parcel_results %}
+                <section class="parcel-results">
+                    <h2>Parcel results</h2>
+
+                    {% for result in parcel_results %}
+                        <article
+                            class="parcel-result
+                            {% if result.success %}result-success{% else %}result-error{% endif %}"
+                        >
+                            <h3>{{ result.filename }}</h3>
+
+                            {% if result.success %}
+                                <dl class="result-details">
+                                    <div>
+                                        <dt>Recipient</dt>
+                                        <dd>
+                                            {{ result.recipient_name or "Not detected" }}
+                                        </dd>
+                                    </div>
+
+                                    <div>
+                                        <dt>Phone</dt>
+                                        <dd>
+                                            {{ result.phone_number or "Not detected" }}
+                                        </dd>
+                                    </div>
+
+                                    <div>
+                                        <dt>Room</dt>
+                                        <dd>
+                                            {{ result.room or "Not detected" }}
+                                        </dd>
+                                    </div>
+
+                                    <div>
+                                        <dt>Tracking number</dt>
+                                        <dd>
+                                            {{ result.tracking_number or "Not detected" }}
+                                        </dd>
+                                    </div>
+
+                                    <div>
+                                        <dt>OCR confidence</dt>
+                                        <dd>
+                                            {{ result.confidence|title }}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            {% else %}
+                                <p>{{ result.error }}</p>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </section>
             {% endif %}
 
             <form
