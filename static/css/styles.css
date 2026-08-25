@@ -1221,6 +1221,309 @@ a {
     }
 }
 
+/* Alias safeguards and management */
+
+.review-card-unresolved {
+    border-color: #d98e8e;
+    box-shadow: 0 8px 24px rgba(147, 46, 46, 0.09);
+}
+
+.review-card-unresolved .action-required-header {
+    border-left-color: #b83e3e;
+    background: #fff3f3;
+}
+
+.review-card-unresolved .action-required-header strong {
+    color: #932e2e;
+}
+
+.confirmation-dialog {
+    width: min(460px, calc(100% - 28px));
+    padding: 0;
+    border: 0;
+    border-radius: 16px;
+    background: #fff;
+    color: #17211c;
+    box-shadow: 0 24px 70px rgba(18, 35, 27, 0.28);
+}
+
+.confirmation-dialog::backdrop {
+    background: rgba(14, 27, 21, 0.58);
+    backdrop-filter: blur(2px);
+}
+
+.confirmation-dialog-content {
+    padding: 28px;
+    text-align: center;
+}
+
+.confirmation-dialog-content h2 {
+    margin: 12px 0 10px;
+}
+
+.confirmation-dialog-content > p {
+    line-height: 1.55;
+}
+
+.confirmation-icon {
+    width: 46px;
+    height: 46px;
+    margin: 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #fff1cc;
+    color: #755400;
+    font-size: 1.25rem;
+    font-weight: 900;
+}
+
+.confirmation-warning {
+    color: #755400;
+    font-size: 0.78rem;
+}
+
+.confirmation-actions {
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.alias-manager-header {
+    margin-bottom: 24px;
+}
+
+.alias-manager-header h1 {
+    margin: 0 0 10px;
+    font-size: clamp(1.8rem, 5vw, 2.7rem);
+}
+
+.alias-manager-header .description {
+    max-width: 700px;
+    margin-bottom: 0;
+}
+
+.alias-add-card {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: minmax(180px, 0.7fr) minmax(320px, 1.3fr);
+    gap: 30px;
+    border: 1px solid #dce4df;
+    border-radius: 15px;
+    background: #fff;
+}
+
+.alias-add-card h2 {
+    margin: 0;
+}
+
+.alias-manager-form,
+.alias-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+}
+
+.alias-manager-form > label,
+.alias-edit-form label,
+.manager-resident-search > label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #526159;
+    font-size: 0.76rem;
+    font-weight: 750;
+}
+
+.alias-manager-form input,
+.alias-edit-form input,
+.alias-filter,
+.manager-resident-search input {
+    min-height: 43px;
+    padding: 9px 11px;
+    border: 1px solid #cbd7d0;
+    border-radius: 8px;
+    background: #fff;
+    color: #17211c;
+}
+
+.manager-resident-result {
+    width: 100%;
+    padding: 10px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 0;
+    border-top: 1px solid #e3eae6;
+    background: transparent;
+    color: #17211c;
+    cursor: pointer;
+    text-align: left;
+}
+
+.manager-resident-result:hover {
+    color: #176b4d;
+}
+
+.manager-resident-result span {
+    color: #68766e;
+    font-size: 0.76rem;
+}
+
+.selected-resident {
+    margin: 8px 0 0;
+    padding: 10px;
+    border-radius: 8px;
+    background: #eaf3ee;
+    color: #176b4d;
+    font-size: 0.8rem;
+    font-weight: 750;
+}
+
+.alias-list-section {
+    margin-top: 30px;
+}
+
+.alias-filter {
+    width: min(320px, 100%);
+}
+
+.managed-alias-list {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.managed-alias-card {
+    padding: 17px 20px;
+    display: grid;
+    grid-template-columns: minmax(170px, 0.8fr) auto minmax(260px, 1.2fr) auto;
+    align-items: center;
+    gap: 20px;
+    border: 1px solid #dce4df;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.managed-alias-main,
+.managed-resident-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.alias-direction-label {
+    color: #68766e;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.managed-alias-main strong,
+.managed-resident-main strong,
+.managed-resident-main span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.managed-alias-main strong {
+    color: #176b4d;
+    font-size: 1.02rem;
+}
+
+.managed-resident-main span {
+    color: #68766e;
+    font-size: 0.76rem;
+}
+
+.alias-arrow {
+    color: #8aa096;
+    font-size: 1.15rem;
+}
+
+.alias-card-actions {
+    position: relative;
+}
+
+.alias-card-actions summary {
+    color: #176b4d;
+    cursor: pointer;
+    font-size: 0.76rem;
+    font-weight: 750;
+}
+
+.alias-action-forms {
+    min-width: 270px;
+    margin-top: 12px;
+    padding: 14px;
+    position: absolute;
+    z-index: 3;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border: 1px solid #dce4df;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 16px 36px rgba(24, 60, 43, 0.15);
+}
+
+.alias-action-forms > form + form {
+    padding-top: 12px;
+    border-top: 1px solid #e4eae7;
+}
+
+@media (max-width: 760px) {
+    .alias-add-card {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
+    .managed-alias-card {
+        grid-template-columns: 1fr auto;
+    }
+
+    .managed-resident-main {
+        grid-column: 1;
+    }
+
+    .alias-arrow {
+        display: none;
+    }
+
+    .alias-card-actions {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+    }
+}
+
+@media (max-width: 460px) {
+    .confirmation-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .managed-alias-card {
+        grid-template-columns: 1fr;
+    }
+
+    .alias-card-actions {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .alias-action-forms {
+        width: 100%;
+        min-width: 0;
+        position: static;
+    }
+}
+
 /* Compact student-ID-first review */
 
 .confirmed-result {
