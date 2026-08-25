@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/styles.css') }}"
+    >
+    <title>Review batch · ParcelMatch</title>
+</head>
+<body>
+    <main class="app-shell desktop-shell">
+        {% include "_user_bar.html" %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="message flash-{{ category }}" role="status">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endwith %}
+
+        <section class="review-header">
+            <div>
+                <a class="back-link" href="{{ url_for('batches_dashboard') }}">
+                    ← Active batches
+                </a>
+                <p class="eyebrow">Human checking</p>
+                <h1>{{ batch.created_at|batch_time }}</h1>
+                <p class="description">
+                    {{ batch.ready_count }} ready ·
+                    {{ batch.failed_count }} failed ·
+                    {{ batch.reviewed_count }} reviewed
+                </p>
+            </div>
+
+            <span class="status-badge status-{{ batch.status }}">
+                {{ batch.status|replace('_', ' ')|title }}
+            </span>
+        </section>
+
+        <div class="review-toolbar" role="group" aria-label="Filter parcels">
+            <button class="filter-button is-active" data-filter="all" type="button">
+                All
+            </button>
+            <button class="filter-button" data-filter="pending" type="button">
+                Needs review
+            </button>
+            <button class="filter-button" data-filter="confirmed" type="button">
+                Confirmed
+            </button>
+            <button class="filter-button" data-filter="unresolved" type="button">
+                Unresolved
+            </button>
+        </div>
+
+        <section class="review-list">
+            {% for item in items %}
+                <article
+                    class="review-card"
+                    data-review-status="{{ item.review_status }}"
+                >
+                    <header class="review-card-header">
+                        <div>
+                            <span class="filename">{{ item.filename }}</span>
+                            <div class="card-statuses">
+                                <span class="status-badge status-{{ item.processing_status }}">
+                                    {{ item.processing_status|title }}
+                                </span>
+                                <span class="status-badge review-{{ item.review_status }}">
+                                    {{ item.review_status|title }}
+                                </span>
+                            </div>
+                        </div>
+                        <strong class="match-label match-{{ item.match.status if item.match else 'not_found' }}">
+                            {{ (item.match.status if item.match else 'not_found')
+                               |replace('_', ' ')|title }}
+                        </strong>
+                    </header>
+
+                    {% if item.processing_status == "failed" %}
+                        <div class="message error-message">
+                            {{ item.error or "This image could not be processed." }}
+                        </div>
+                    {% else %}
+                        <div class="review-columns">
+                            <section class="review-panel">
+                                <h2>Detected parcel information</h2>
+                                <dl class="review-details">
+                                    <div>
+                                        <dt>Name</dt>
+                                        <dd>{{ item.detected.name or "Not detected" }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Phone</dt>
+                                        <dd>{{ item.detected.phone or "Not detected" }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Room</dt>
+                                        <dd>{{ item.detected.room_display or "Not detected" }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>OCR confidence</dt>
+                                        <dd>{{ item.detected.ocr_confidence|title }}</dd>
+                                    </div>
+                                </dl>
+
+                                <details class="edit-details">
+                                    <summary>Edit and rematch</summary>
+                                    <form
+                                        class="edit-form"
+                                        method="POST"
+                                        action="{{ url_for(
+                                            'edit_batch_item',
+                                            batch_id=batch.id,
+                                            item_id=item.id
+                                        ) }}"
+                                    >
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <label>
+                                            Detected name
+                                            <input name="detected_name" value="{{ item.detected.name }}">
+                                        </label>
+                                        <label>
+                                            Phone
+                                            <input name="detected_phone" value="{{ item.detected.phone }}">
+                                        </label>
+                                        <div class="field-row">
+                                            <label>
+                                                Building
+                                                <input name="building_number" value="{{ item.detected.building_number }}" inputmode="numeric">
+                                            </label>
+                                            <label>
+                                                Room
+                                                <input name="room_number" value="{{ item.detected.room_number }}" inputmode="numeric">
+                                            </label>
+                                            <label>
+                                                Letter
+                                                <input name="room_letter" value="{{ item.detected.room_letter }}" maxlength="1">
+                                            </label>
+                                        </div>
+                                        <button class="secondary-button" type="submit">
+                                            Save and rematch
+                                        </button>
+                                    </form>
+                                </details>
+                            </section>
+
+                            <section class="review-panel resident-panel">
+                                <h2>Resident match</h2>
+
+                                {% if item.match.resident %}
+                                    <dl class="review-details">
+                                        <div>
+                                            <dt>Resident</dt>
+                                            <dd>{{ item.match.resident.full_name }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Student ID</dt>
+                                            <dd>{{ item.match.resident.student_id }}</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Registered room</dt>
+                                            <dd>{{ item.match.resident.room }}</dd>
+                                        </div>
+                                    </dl>
+
+                                    <p class="match-reason">{{ item.match.reason }}</p>
+
+                                    {% if item.aliases %}
+                                        <div class="alias-list">
+                                            <span class="small-label">Saved aliases</span>
+                                            <div class="alias-chips">
+                                                {% for alias in item.aliases %}
+                                                    <span class="alias-chip">{{ alias }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if item.can_save_alias %}
+                                        <form
+                                            class="inline-form alias-review-form"
+                                            method="POST"
+                                            action="{{ url_for(
+                                                'save_batch_item_alias',
+                                                batch_id=batch.id,
+                                                item_id=item.id
+                                            ) }}"
+                                        >
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="resident_id" value="{{ item.match.resident.student_id }}">
+                                            <input type="hidden" name="alias" value="{{ item.detected.name }}">
+                                            <button class="secondary-button" type="submit">
+                                                Save detected name as alias
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                {% else %}
+                                    <p class="match-reason">
+                                        {{ item.match.reason or "No resident was selected." }}
+                                    </p>
+                                {% endif %}
+
+                                {% if item.match.evidence %}
+                                    <details class="match-evidence">
+                                        <summary>Why was this suggested?</summary>
+                                        <ul>
+                                            {% for evidence in item.match.evidence %}
+                                                <li>{{ evidence }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </details>
+                                {% endif %}
+
+                                {% if item.match.candidates %}
+                                    <form
+                                        class="candidate-form"
+                                        method="POST"
+                                        action="{{ url_for(
+                                            'select_batch_item_resident',
+                                            batch_id=batch.id,
+                                            item_id=item.id
+                                        ) }}"
+                                    >
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <label>
+                                            Choose another candidate
+                                            <select name="resident_id" required>
+                                                {% for candidate in item.match.candidates %}
+                                                    {% if candidate.resident %}
+                                                        <option value="{{ candidate.resident.student_id }}">
+                                                            {{ candidate.resident.full_name }} · {{ candidate.resident.room }}
+                                                        </option>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <button class="secondary-button" type="submit">
+                                            Select and confirm
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                <div
+                                    class="resident-search"
+                                    data-search-url="{{ url_for('api_search_residents') }}"
+                                    data-select-url="{{ url_for(
+                                        'select_batch_item_resident',
+                                        batch_id=batch.id,
+                                        item_id=item.id
+                                    ) }}"
+                                    data-csrf-token="{{ csrf_token() }}"
+                                >
+                                    <label>
+                                        Search all residents
+                                        <span class="resident-search-row">
+                                            <input
+                                                class="resident-search-input"
+                                                type="search"
+                                                placeholder="Name or student ID"
+                                            >
+                                            <button
+                                                class="secondary-button resident-search-button"
+                                                type="button"
+                                            >
+                                                Search
+                                            </button>
+                                        </span>
+                                    </label>
+                                    <div class="resident-search-results"></div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <footer class="review-actions">
+                            <form
+                                method="POST"
+                                action="{{ url_for(
+                                    'confirm_batch_item',
+                                    batch_id=batch.id,
+                                    item_id=item.id
+                                ) }}"
+                            >
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="primary-button compact-button" type="submit">
+                                    Confirm match
+                                </button>
+                            </form>
+
+                            <form
+                                method="POST"
+                                action="{{ url_for(
+                                    'mark_batch_item_unresolved',
+                                    batch_id=batch.id,
+                                    item_id=item.id
+                                ) }}"
+                            >
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="text-button danger-text" type="submit">
+                                    Mark unresolved
+                                </button>
+                            </form>
+                        </footer>
+                    {% endif %}
+                </article>
+            {% else %}
+                <section class="empty-state">
+                    <h2>No parcel results yet</h2>
+                    <p>This batch may still be processing on the phone.</p>
+                </section>
+            {% endfor %}
+        </section>
+
+        <section class="batch-footer-actions">
+            <form method="POST" action="{{ url_for('complete_review_batch', batch_id=batch.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="primary-button" type="submit">
+                    Complete batch
+                </button>
+            </form>
+
+            <form
+                method="POST"
+                action="{{ url_for('delete_review_batch', batch_id=batch.id) }}"
+                onsubmit="return confirm('Delete this temporary batch?');"
+            >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="danger-button" type="submit">
+                    Delete batch
+                </button>
+            </form>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/review.js') }}"></script>
+</body>
+</html>
