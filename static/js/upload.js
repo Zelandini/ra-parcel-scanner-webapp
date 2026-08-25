@@ -50,7 +50,7 @@ function createStatusRows(files) {
         name.textContent = file.name;
 
         const status = document.createElement("span");
-        status.className = "upload-item-status status-waiting";
+        status.className = "upload-item-status upload-waiting";
         status.textContent = "Waiting";
 
         item.append(name, status);
@@ -78,7 +78,7 @@ async function readJson(response) {
 
 
 async function uploadImage(file, index, itemUrl, total) {
-    updateStatus(index, "Uploading and reading label…", "status-processing");
+    updateStatus(index, "Uploading and reading label…", "upload-processing");
     progressTitle.textContent = `Reading parcel ${index + 1}…`;
 
     const formData = new FormData();
@@ -105,12 +105,12 @@ async function uploadImage(file, index, itemUrl, total) {
             result.match_status === "confirmed"
                 ? "Ready · confirmed match"
                 : "Ready · human check needed",
-            "status-ready"
+            "upload-ready"
         );
 
     } catch (error) {
         failedCount += 1;
-        updateStatus(index, "Failed · check on desktop", "status-failed");
+        updateStatus(index, "Failed · check on desktop", "upload-failed");
 
     } finally {
         completedCount += 1;
