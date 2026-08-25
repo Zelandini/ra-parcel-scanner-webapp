@@ -41,6 +41,7 @@ from services.batch_repository import (
     get_batch_item,
     get_batch_items,
     list_batches,
+    refresh_batch_summary,
     save_item_failure,
     save_item_result,
     update_batch_item,
@@ -298,8 +299,31 @@ def process_uploaded_image(uploaded_file):
     }
 
 
-def prepare_items_for_review(items):
+def prepare_items_for_review(batch_id, items):
+    summary_changed = False
+
     for item in items:
+        match = item.get("match", {})
+
+        if (
+            item.get("processing_status") == "ready"
+            and item.get("review_status") == "pending"
+            and match.get("status") == "confirmed"
+            and match.get("resident")
+        ):
+            update_batch_item(
+                batch_id,
+                item["id"],
+                {
+                    "review_status": "confirmed",
+                    "confirmation_source": "automatic",
+                },
+                refresh=False,
+            )
+            item["review_status"] = "confirmed"
+            item["confirmation_source"] = "automatic"
+            summary_changed = True
+
         resident = item.get("match", {}).get("resident")
         resident_id = (
             resident.get("student_id")
@@ -320,6 +344,9 @@ def prepare_items_for_review(items):
                 "Aliases could not be loaded for a batch item."
             )
             item["aliases"] = []
+
+    if summary_changed:
+        refresh_batch_summary(batch_id)
 
     return items
 
@@ -461,6 +488,7 @@ def review_batch(batch_id):
 
     try:
         items = prepare_items_for_review(
+            batch_id,
             get_batch_items(batch_id)
         )
     except Exception:
@@ -677,7 +705,18 @@ def edit_batch_item(batch_id, item_id):
                 detected_name,
                 match_result.get("resident"),
             ),
-            "review_status": "pending",
+            "review_status": (
+                "confirmed"
+                if match_result.get("status") == "confirmed"
+                and match_result.get("resident")
+                else "pending"
+            ),
+            "confirmation_source": (
+                "automatic"
+                if match_result.get("status") == "confirmed"
+                and match_result.get("resident")
+                else ""
+            ),
         },
     )
 
@@ -722,6 +761,7 @@ def select_batch_item_resident(batch_id, item_id):
                 safe_resident,
             ),
             "review_status": "confirmed",
+            "confirmation_source": "human",
         },
     )
 
@@ -744,7 +784,10 @@ def confirm_batch_item(batch_id, item_id):
         update_batch_item(
             batch_id,
             item_id,
-            {"review_status": "confirmed"},
+            {
+                "review_status": "confirmed",
+                "confirmation_source": "human",
+            },
         )
         flash("Parcel match confirmed.", "success")
 
@@ -762,7 +805,10 @@ def mark_batch_item_unresolved(batch_id, item_id):
     update_batch_item(
         batch_id,
         item_id,
-        {"review_status": "unresolved"},
+        {
+            "review_status": "unresolved",
+            "confirmation_source": "human",
+        },
     )
     flash("Parcel marked as unresolved.", "warning")
     return redirect(url_for("review_batch", batch_id=batch_id))
@@ -804,6 +850,7 @@ def save_batch_item_alias(batch_id, item_id):
             {
                 "can_save_alias": False,
                 "review_status": "confirmed",
+                "confirmation_source": "human",
             },
         )
         flash("Alias saved and parcel confirmed.", "success")
