@@ -1,4 +1,5 @@
 import os
+import re
 import secrets
 from functools import wraps
 from tempfile import TemporaryDirectory
@@ -261,6 +262,163 @@ def can_save_alias(detected_name, resident):
     )
 
 
+def _comparison_row(
+    label,
+    parcel_value,
+    resident_value,
+    status,
+    result_label,
+):
+    return {
+        "label": label,
+        "parcel_value": str(parcel_value or ""),
+        "resident_value": str(resident_value or ""),
+        "status": status,
+        "result_label": result_label,
+    }
+
+
+def _compare_name(detected_name, resident, aliases):
+    registered_names = {
+        normalize_name(resident.get("full_name")),
+        normalize_name(resident.get("legal_full_name")),
+    }
+    registered_names.discard("")
+    normalized_detected = normalize_name(detected_name)
+
+    if not normalized_detected:
+        status = "missing"
+        label = "Not detected"
+    elif normalized_detected in registered_names:
+        status = "supporting"
+        label = "Exact registered name"
+    elif normalized_detected in {
+        normalize_name(alias)
+        for alias in aliases
+    }:
+        status = "supporting"
+        label = "Exact saved alias"
+    else:
+        status = "review"
+        label = "Not exact — review"
+
+    return _comparison_row(
+        "Name",
+        detected_name,
+        resident.get("full_name"),
+        status,
+        label,
+    )
+
+
+def _compare_phone(detected_phone, resident_phone):
+    detected = normalize_phone(detected_phone)
+    registered = normalize_phone(resident_phone)
+
+    if not detected:
+        status = "missing"
+        label = "Not detected"
+    elif not registered:
+        status = "missing"
+        label = "Not in resident record"
+    elif detected == registered or (
+        len(detected) >= 8
+        and len(registered) >= 8
+        and detected[-8:] == registered[-8:]
+    ):
+        status = "supporting"
+        label = "Same phone number"
+    else:
+        status = "conflict"
+        label = "Different phone number"
+
+    return _comparison_row(
+        "Phone",
+        detected_phone,
+        resident_phone,
+        status,
+        label,
+    )
+
+
+def _normalize_room_for_comparison(value):
+    return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
+
+
+def _compare_room(detected_room, resident_room):
+    detected = _normalize_room_for_comparison(detected_room)
+    registered = _normalize_room_for_comparison(resident_room)
+
+    if not detected:
+        status = "missing"
+        label = "Not detected"
+    elif not registered:
+        status = "missing"
+        label = "Not in resident record"
+    elif detected == registered:
+        status = "supporting"
+        label = "Exact room"
+    elif (
+        min(len(detected), len(registered)) >= 3
+        and (
+            detected.endswith(registered)
+            or registered.endswith(detected)
+        )
+    ):
+        status = "review"
+        label = "Partial room — review"
+    else:
+        status = "conflict"
+        label = "Different room"
+
+    return _comparison_row(
+        "Room",
+        detected_room,
+        resident_room,
+        status,
+        label,
+    )
+
+
+def build_match_comparison(item, resident, aliases):
+    detected = item.get("detected", {})
+    rows = [
+        _compare_name(
+            detected.get("name", ""),
+            resident,
+            aliases,
+        ),
+        _compare_phone(
+            detected.get("phone", ""),
+            resident.get("phone_number", ""),
+        ),
+        _compare_room(
+            detected.get("room_display", ""),
+            resident.get("room", ""),
+        ),
+    ]
+
+    return {
+        "rows": rows,
+        "supporting_count": sum(
+            row["status"] == "supporting"
+            for row in rows
+        ),
+        "review_count": sum(
+            row["status"] == "review"
+            for row in rows
+        ),
+        "conflict_count": sum(
+            row["status"] == "conflict"
+            for row in rows
+        ),
+        "missing_count": sum(
+            row["status"] == "missing"
+            for row in rows
+        ),
+    }
+
+
 def process_uploaded_image(uploaded_file):
     gemini_client = genai.Client()
 
@@ -338,17 +496,29 @@ def prepare_items_for_review(batch_id, items):
 
         if not resident_id:
             item["aliases"] = []
+            item["comparison"] = None
             continue
 
         try:
             item["aliases"] = get_active_aliases_for_resident(
                 resident_id
             )
+            full_resident = get_resident_by_student_id(resident_id)
+            item["comparison"] = build_match_comparison(
+                item,
+                full_resident or resident,
+                item["aliases"],
+            )
         except Exception:
             app.logger.exception(
-                "Aliases could not be loaded for a batch item."
+                "Review evidence could not be loaded for a batch item."
             )
             item["aliases"] = []
+            item["comparison"] = build_match_comparison(
+                item,
+                resident,
+                [],
+            )
 
     if summary_changed:
         refresh_batch_summary(batch_id)
