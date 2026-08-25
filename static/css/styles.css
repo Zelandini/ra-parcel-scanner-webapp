@@ -412,3 +412,52 @@ body {
 
     font-size: 0.8rem;
 }
+.alias-form {
+    margin-top: 16px;
+    padding: 14px;
+
+    border: 1px solid #cddbd4;
+    border-radius: 10px;
+
+    background-color: #f1f8f4;
+}
+
+.alias-form p {
+    margin: 0 0 12px;
+
+    color: #526159;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.remember-alias-button {
+    min-height: 42px;
+    padding: 8px 14px;
+
+    border: 1px solid #176b4d;
+    border-radius: 8px;
+
+    background-color: white;
+    color: #176b4d;
+
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.flash-success {
+    border: 1px solid #a7d5bd;
+    background-color: #eff9f4;
+    color: #155c42;
+}
+
+.flash-warning {
+    border: 1px solid #e8c776;
+    background-color: #fff8df;
+    color: #755400;
+}
+
+.flash-error {
+    border: 1px solid #e5a5a5;
+    background-color: #fff1f1;
+    color: #932e2e;
+}

@@ -19,12 +19,29 @@
 <body>
     <main class="page">
     <div class="user-bar">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div
+                        class="message flash-{{ category }}"
+                        role="status"
+                    >
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
         <div>
             <span class="user-label">Signed in as</span>
             <strong>{{ session.name }}</strong>
         </div>
 
         <form method="POST" action="{{ url_for('logout') }}">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
             <button class="logout-button" type="submit">
                 Sign out
             </button>
@@ -141,6 +158,47 @@
                                                 {% for item in result.match.evidence %}
                                                     <li>{{ item }}</li>
                                                 {% endfor %}
+                                                {% if (
+                                                    result.can_save_alias
+                                                ) %}
+                                                    <form
+                                                        class="alias-form"
+                                                        method="POST"
+                                                        action="{{ url_for('create_alias') }}"
+                                                    >
+                                                        <input
+                                                            type="hidden"
+                                                            name="csrf_token"
+                                                            value="{{ csrf_token() }}"
+                                                        >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="resident_id"
+                                                            value="{{ result.match.resident.student_id }}"
+                                                        >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="alias"
+                                                            value="{{ result.parcel.recipient_name }}"
+                                                        >
+
+                                                        <p>
+                                                            Does this parcel name belong to
+                                                            <strong>
+                                                                {{ result.match.resident.full_name }}
+                                                            </strong>?
+                                                        </p>
+
+                                                        <button
+                                                            class="remember-alias-button"
+                                                            type="submit"
+                                                        >
+                                                            Remember as alias
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
                                             </ul>
                                         </details>
                                     {% endif %}
@@ -156,6 +214,11 @@
                 method="POST"
                 enctype="multipart/form-data"
             >
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                >
                 <label
                     class="upload-area"
                     for="parcel-images"

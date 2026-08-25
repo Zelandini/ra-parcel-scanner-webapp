@@ -366,24 +366,74 @@ def _score_candidate(index, resident, search_name, surname_match, parcel):
 
 
 def _choose_result(candidates, surname_match_type):
-    exact_names = [candidate for candidate in candidates if candidate["exact_name"] and not candidate["room_conflict"]]
-    if surname_match_type == "exact" and len(exact_names) == 1:
-        return exact_names[0], "confirmed", "Unique exact full-name match."
+    exact_names = [
+        candidate
+        for candidate in candidates
+        if (
+            candidate["exact_name"]
+            and not candidate["room_conflict"]
+        )
+    ]
 
-    exact_phones = [candidate for candidate in candidates if candidate["scores"]["phone"] == 100 and not candidate["room_conflict"]]
-    if surname_match_type == "exact" and len(exact_phones) == 1:
-        return exact_phones[0], "confirmed", "Exact surname and unique exact phone match."
+    if len(exact_names) == 1:
+        return (
+            exact_names[0],
+            "confirmed",
+            "Unique exact full-name match.",
+        )
+
+    exact_phones = [
+        candidate
+        for candidate in candidates
+        if (
+            candidate["scores"]["phone"] == 100
+            and not candidate["room_conflict"]
+        )
+    ]
+
+    if (
+        surname_match_type in {"exact", "mixed"}
+        and len(exact_phones) == 1
+    ):
+        return (
+            exact_phones[0],
+            "confirmed",
+            "Unique exact phone match with matching surname evidence.",
+        )
 
     best = candidates[0]
-    second_total = candidates[1]["scores"]["total"] if len(candidates) > 1 else 0
-    clear_lead = best["scores"]["total"] - second_total >= RESULT_GAP
-    supported = (
-        best["scores"]["given_name"] >= GIVEN_NAME_THRESHOLD
-        or (best["scores"]["phone"] or 0) >= PHONE_THRESHOLD
+
+    second_total = (
+        candidates[1]["scores"]["total"]
+        if len(candidates) > 1
+        else 0
     )
+
+    clear_lead = (
+        best["scores"]["total"] - second_total
+        >= RESULT_GAP
+    )
+
+    supported = (
+        best["scores"]["given_name"]
+        >= GIVEN_NAME_THRESHOLD
+        or (
+            best["scores"]["phone"] or 0
+        ) >= PHONE_THRESHOLD
+    )
+
     if clear_lead and supported:
-        return best, "possible", "One candidate has a clear lead but requires confirmation."
-    return best, "ambiguous", "The available evidence cannot safely identify one resident."
+        return (
+            best,
+            "possible",
+            "One candidate has a clear lead but requires confirmation.",
+        )
+
+    return (
+        best,
+        "ambiguous",
+        "The available evidence cannot safely identify one resident.",
+    )
 
 
 def _empty_result(detected_name, reason):
@@ -448,3 +498,28 @@ def search_csv(search_name, building_number=None, room_number=None, room_letter=
         "evidence": selected["evidence"],
         "candidates": output_candidates,
     }
+
+def get_resident_by_student_id(student_id):
+    """
+    Return one resident from the local CSV using their student ID.
+    """
+    searched_id = str(student_id or "").strip()
+
+    if not searched_id:
+        return None
+
+    residents = _load_residents(
+        str(RESIDENTS_CSV)
+    )
+
+    matching_residents = residents[
+        residents["student_id"].astype(str).str.strip()
+        == searched_id
+    ]
+
+    if matching_residents.empty:
+        return None
+
+    return _resident_details(
+        matching_residents.iloc[0]
+    )

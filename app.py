@@ -1,7 +1,9 @@
 import os
 import secrets
 from functools import wraps
-from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from dotenv import load_dotenv
 from flask import (
     Flask,
     abort,
@@ -12,29 +14,33 @@ from flask import (
     session,
     url_for,
 )
+from flask_wtf.csrf import CSRFProtect
+from google import genai
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
-
-from tempfile import TemporaryDirectory
-
-from dotenv import load_dotenv
-from google import genai
 from PIL import UnidentifiedImageError
 
+from services.alias_repository import save_alias
 from services.image_processing import prepare_uploaded_image
 from services.parcel_reader import read_parcel
-
-from services.resident_matcher import (normalize_phone, search_csv)
+from services.resident_matcher import (
+    get_resident_by_student_id,
+    normalize_name,
+    normalize_phone,
+    search_csv,
+)
 
 
 load_dotenv()
 
 app = Flask(__name__)
 
-app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+csrf = CSRFProtect(app)
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
@@ -48,12 +54,14 @@ APPROVED_RA_EMAILS = {
 }
 
 if not app.config["SECRET_KEY"]:
-    raise RuntimeError("FLASK_SECRET_KEY is not configured.")
+    raise RuntimeError(
+        "FLASK_SECRET_KEY is not configured."
+    )
 
 if not GOOGLE_CLIENT_ID:
-    raise RuntimeError("GOOGLE_CLIENT_ID is not configured.")
-
-app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
+    raise RuntimeError(
+        "GOOGLE_CLIENT_ID is not configured."
+    )
 
 ALLOWED_EXTENSIONS = {
     "jpg",
@@ -78,7 +86,8 @@ def allowed_file(filename):
 
 def create_display_room(parcel):
     """
-    Create one readable room value from Gemini's structured fields.
+    Create one readable room value from Gemini's
+    structured fields.
     """
     if parcel.raw_room_text:
         return parcel.raw_room_text
@@ -121,8 +130,11 @@ def login():
 
 
 @app.route("/auth/google", methods=["POST"])
+@csrf.exempt
 def google_login():
-    submitted_data = request.get_json(silent=True) or {}
+    submitted_data = request.get_json(
+        silent=True
+    ) or {}
 
     submitted_csrf_token = submitted_data.get(
         "csrf_token",
@@ -143,14 +155,18 @@ def google_login():
         )
     ):
         return jsonify({
-            "error": "The login request could not be verified."
+            "error": (
+                "The login request could not be verified."
+            )
         }), 400
 
     credential = submitted_data.get("credential")
 
     if not credential:
         return jsonify({
-            "error": "Google did not provide a login credential."
+            "error": (
+                "Google did not provide a login credential."
+            )
         }), 400
 
     try:
@@ -162,21 +178,30 @@ def google_login():
 
     except ValueError:
         return jsonify({
-            "error": "Google could not verify this login."
+            "error": (
+                "Google could not verify this login."
+            )
         }), 401
 
     email = str(
         google_user.get("email", "")
     ).strip().lower()
 
-    if not email or not google_user.get("email_verified"):
+    if (
+        not email
+        or not google_user.get("email_verified")
+    ):
         return jsonify({
-            "error": "The Google email is not verified."
+            "error": (
+                "The Google email is not verified."
+            )
         }), 403
 
     if email not in APPROVED_RA_EMAILS:
         return jsonify({
-            "error": "This Google account is not approved."
+            "error": (
+                "This Google account is not approved."
+            )
         }), 403
 
     session.clear()
@@ -187,7 +212,9 @@ def google_login():
         google_user.get("name")
         or email
     )
-    session["picture"] = google_user.get("picture")
+    session["picture"] = google_user.get(
+        "picture"
+    )
 
     return jsonify({
         "redirect": url_for("home")
@@ -195,9 +222,12 @@ def google_login():
 
 
 @app.route("/logout", methods=["POST"])
+@login_required
 def logout():
     session.clear()
+
     return redirect(url_for("login"))
+
 
 @app.route("/", methods=["GET", "POST"])
 @login_required
@@ -208,18 +238,31 @@ def home():
     if request.method == "POST":
         images = [
             image
-            for image in request.files.getlist("parcel_images")
+            for image in request.files.getlist(
+                "parcel_images"
+            )
             if image and image.filename
         ]
 
         if not images:
-            error = "Please select at least one parcel image."
+            error = (
+                "Please select at least one parcel image."
+            )
 
         elif len(images) > MAX_IMAGES:
-            error = f"You can upload a maximum of {MAX_IMAGES} images."
+            error = (
+                "You can upload a maximum of "
+                f"{MAX_IMAGES} images."
+            )
 
-        elif any(not allowed_file(image.filename) for image in images):
-            error = "One or more files use an unsupported format."
+        elif any(
+            not allowed_file(image.filename)
+            for image in images
+        ):
+            error = (
+                "One or more files use an "
+                "unsupported format."
+            )
 
         else:
             try:
@@ -230,7 +273,9 @@ def home():
                         try:
                             jpeg_path = prepare_uploaded_image(
                                 uploaded_file=image,
-                                temporary_directory=temporary_directory,
+                                temporary_directory=(
+                                    temporary_directory
+                                ),
                             )
 
                             parcel = read_parcel(
@@ -244,39 +289,97 @@ def home():
 
                             if parcel.recipient_full_name:
                                 match_result = search_csv(
-                                    search_name=parcel.recipient_full_name,
-                                    building_number=parcel.building_number,
-                                    room_number=parcel.room_number,
-                                    room_letter=parcel.room_letter,
-                                    phone_number=normalized_phone,
+                                    search_name=(
+                                        parcel.recipient_full_name
+                                    ),
+                                    building_number=(
+                                        parcel.building_number
+                                    ),
+                                    room_number=(
+                                        parcel.room_number
+                                    ),
+                                    room_letter=(
+                                        parcel.room_letter
+                                    ),
+                                    phone_number=(
+                                        normalized_phone
+                                    ),
                                 )
+
                             else:
                                 match_result = {
                                     "status": "not_found",
-                                    "reason": "No recipient name was detected.",
+                                    "reason": (
+                                        "No recipient name "
+                                        "was detected."
+                                    ),
                                     "resident": None,
                                     "scores": {},
                                     "evidence": [],
                                     "candidates": [],
                                 }
 
+                            matched_resident = (
+                                match_result.get("resident")
+                            )
+
+                            can_save_alias = False
+
+                            if (
+                                matched_resident
+                                and parcel.recipient_full_name
+                            ):
+                                detected_name = normalize_name(
+                                    parcel.recipient_full_name
+                                )
+
+                                official_name = normalize_name(
+                                    matched_resident.get(
+                                        "full_name"
+                                    )
+                                )
+
+                                legal_name = normalize_name(
+                                    matched_resident.get(
+                                        "legal_full_name"
+                                    )
+                                )
+
+                                can_save_alias = (
+                                    bool(detected_name)
+                                    and detected_name
+                                    not in {
+                                        official_name,
+                                        legal_name,
+                                    }
+                                )
+
                             parcel_results.append({
                                 "filename": image.filename,
                                 "success": True,
-
                                 "parcel": {
                                     "recipient_name": (
                                         parcel.recipient_full_name
                                     ),
-                                    "phone_number": normalized_phone,
-                                    "room": create_display_room(parcel),
+                                    "phone_number": (
+                                        normalized_phone
+                                    ),
+                                    "room": (
+                                        create_display_room(
+                                            parcel
+                                        )
+                                    ),
                                     "tracking_number": (
                                         parcel.tracking_number
                                     ),
-                                    "ocr_confidence": parcel.confidence,
+                                    "ocr_confidence": (
+                                        parcel.confidence
+                                    ),
                                 },
-
                                 "match": match_result,
+                                "can_save_alias": (
+                                    can_save_alias
+                                ),
                             })
 
                         except (
@@ -288,7 +391,8 @@ def home():
                                 "filename": image.filename,
                                 "success": False,
                                 "error": (
-                                    "The image could not be read: "
+                                    "The image could not "
+                                    "be read: "
                                     f"{image_error}"
                                 ),
                             })
@@ -298,16 +402,16 @@ def home():
                                 "filename": image.filename,
                                 "success": False,
                                 "error": (
-                                    "Gemini could not process this image: "
+                                    "Gemini could not process "
+                                    "this image: "
                                     f"{gemini_error}"
                                 ),
                             })
 
-                # Temporary images are deleted here.
-
             except Exception as connection_error:
                 error = (
-                    "The Gemini service could not be started: "
+                    "The Gemini service could not "
+                    "be started: "
                     f"{connection_error}"
                 )
 
@@ -315,6 +419,65 @@ def home():
         "index.html",
         error=error,
         parcel_results=parcel_results,
+        alias_saved=(
+            request.args.get("alias_saved") == "1"
+        ),
+    )
+
+
+@app.route("/aliases", methods=["POST"])
+@login_required
+def create_alias():
+    resident_id = request.form.get(
+        "resident_id",
+        "",
+    ).strip()
+
+    alias = request.form.get(
+        "alias",
+        "",
+    ).strip()
+
+    if not resident_id or not alias:
+        abort(400)
+
+    resident = get_resident_by_student_id(
+        resident_id
+    )
+
+    if not resident:
+        abort(404)
+
+    official_name = normalize_name(
+        resident.get("full_name")
+    )
+
+    legal_name = normalize_name(
+        resident.get("legal_full_name")
+    )
+
+    normalized_alias = normalize_name(alias)
+
+    if not normalized_alias:
+        abort(400)
+
+    if normalized_alias in {
+        official_name,
+        legal_name,
+    }:
+        return redirect(
+            url_for("home", alias_saved="1")
+        )
+
+    save_alias(
+        alias=alias,
+        resident=resident,
+        created_by_sub=session["google_sub"],
+        created_by_email=session["email"],
+    )
+
+    return redirect(
+        url_for("home", alias_saved="1")
     )
 
 
@@ -322,8 +485,12 @@ def home():
 def upload_too_large(_error):
     return render_template(
         "index.html",
-        error="The selected images are too large. The maximum total is 50 MB.",
+        error=(
+            "The selected images are too large. "
+            "The maximum total is 50 MB."
+        ),
         parcel_results=[],
+        alias_saved=False,
     ), 413
 
 
