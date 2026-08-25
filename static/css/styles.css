@@ -1220,3 +1220,196 @@ a {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* Compact student-ID-first review */
+
+.confirmed-result {
+    padding: 15px 18px;
+    display: grid;
+    grid-template-columns: auto minmax(190px, 1fr) auto;
+    align-items: center;
+    gap: 15px;
+    border-left: 5px solid #1f865f;
+}
+
+.confirmed-check {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #dff3e8;
+    color: #176b4d;
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.confirmed-resident {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.confirmed-label {
+    color: #176b4d;
+    font-size: 0.67rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.confirmed-resident strong {
+    overflow: hidden;
+    font-size: 1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.confirmed-resident > span:last-child {
+    overflow: hidden;
+    color: #68766e;
+    font-size: 0.76rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.student-id-result {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    gap: 3px 10px;
+}
+
+.student-id-result > span {
+    grid-column: 1 / -1;
+    color: #68766e;
+    font-size: 0.66rem;
+    font-weight: 750;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.student-id-result code {
+    color: #17211c;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1.05rem;
+    font-weight: 850;
+    letter-spacing: 0.025em;
+}
+
+.copy-id-button {
+    min-height: 34px;
+    padding: 6px 11px;
+    border: 1px solid #176b4d;
+    border-radius: 8px;
+    background: #fff;
+    color: #176b4d;
+    cursor: pointer;
+    font-size: 0.73rem;
+    font-weight: 800;
+}
+
+.copy-id-button.is-copied {
+    background: #176b4d;
+    color: #fff;
+}
+
+.confirmed-details {
+    grid-column: 1 / -1;
+    margin-left: 49px;
+}
+
+.confirmed-details summary,
+.alternative-tools summary {
+    color: #68766e;
+    cursor: pointer;
+    font-size: 0.73rem;
+    font-weight: 700;
+}
+
+.confirmed-details-content {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #e2e9e5;
+}
+
+.confirmed-details-content > p {
+    color: #68766e;
+    font-size: 0.76rem;
+}
+
+.compact-edit-form {
+    max-width: 620px;
+}
+
+.action-required-header {
+    border-left: 5px solid #d39a18;
+}
+
+.action-required-header > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.action-required-header strong {
+    color: #755400;
+    font-size: 0.78rem;
+}
+
+.suggested-resident {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.suggested-resident > span {
+    color: #68766e;
+    font-size: 0.8rem;
+}
+
+.pending-id-result {
+    width: fit-content;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid #dce4df;
+    border-radius: 9px;
+    background: #f8fbf9;
+}
+
+.alternative-tools {
+    margin-top: 18px;
+}
+
+.alternative-tools ul {
+    padding-left: 20px;
+    color: #68766e;
+    font-size: 0.78rem;
+}
+
+@media (max-width: 650px) {
+    .confirmed-result {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .student-id-result {
+        grid-column: 1 / -1;
+        margin-left: 49px;
+    }
+
+    .confirmed-details {
+        margin-left: 49px;
+    }
+}
+
+@media (max-width: 420px) {
+    .confirmed-result {
+        padding: 14px;
+    }
+
+    .student-id-result,
+    .confirmed-details {
+        margin-left: 0;
+    }
+}
