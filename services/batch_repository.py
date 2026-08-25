@@ -126,6 +126,12 @@ def create_processing_item(batch_id, filename):
 
 
 def save_item_result(batch_id, item_id, result):
+    match = result.get("match", {})
+    automatically_confirmed = (
+        match.get("status") == "confirmed"
+        and bool(match.get("resident"))
+    )
+
     (
         get_firestore_database()
         .collection("batches")
@@ -136,7 +142,16 @@ def save_item_result(batch_id, item_id, result):
             {
                 **result,
                 "processing_status": "ready",
-                "review_status": "pending",
+                "review_status": (
+                    "confirmed"
+                    if automatically_confirmed
+                    else "pending"
+                ),
+                "confirmation_source": (
+                    "automatic"
+                    if automatically_confirmed
+                    else ""
+                ),
                 "updated_at": _now(),
             },
             merge=True,
@@ -195,7 +210,12 @@ def get_batch_item(batch_id, item_id):
     return _with_id(document)
 
 
-def update_batch_item(batch_id, item_id, updates):
+def update_batch_item(
+    batch_id,
+    item_id,
+    updates,
+    refresh=True,
+):
     reference = (
         get_firestore_database()
         .collection("batches")
@@ -212,7 +232,9 @@ def update_batch_item(batch_id, item_id, updates):
         merge=True,
     )
 
-    refresh_batch_summary(batch_id)
+    if refresh:
+        refresh_batch_summary(batch_id)
+
     return get_batch_item(batch_id, item_id)
 
 
