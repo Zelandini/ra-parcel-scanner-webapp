@@ -9,6 +9,8 @@ from PIL import UnidentifiedImageError
 from services.image_processing import prepare_uploaded_image
 from services.parcel_reader import read_parcel
 
+from services.resident_matcher import (normalize_phone, search_csv)
+
 
 load_dotenv()
 
@@ -93,23 +95,45 @@ def home():
                                 client=gemini_client,
                             )
 
+                            normalized_phone = normalize_phone(
+                                parcel.phone_number
+                            )
+
+                            if parcel.recipient_full_name:
+                                match_result = search_csv(
+                                    search_name=parcel.recipient_full_name,
+                                    building_number=parcel.building_number,
+                                    room_number=parcel.room_number,
+                                    room_letter=parcel.room_letter,
+                                    phone_number=normalized_phone,
+                                )
+                            else:
+                                match_result = {
+                                    "status": "not_found",
+                                    "reason": "No recipient name was detected.",
+                                    "resident": None,
+                                    "scores": {},
+                                    "evidence": [],
+                                    "candidates": [],
+                                }
+
                             parcel_results.append({
                                 "filename": image.filename,
                                 "success": True,
-                                "recipient_name": (
-                                    parcel.recipient_full_name
-                                ),
-                                "phone_number": parcel.phone_number,
-                                "room": create_display_room(parcel),
-                                "building_number": (
-                                    parcel.building_number
-                                ),
-                                "room_number": parcel.room_number,
-                                "room_letter": parcel.room_letter,
-                                "tracking_number": (
-                                    parcel.tracking_number
-                                ),
-                                "confidence": parcel.confidence,
+
+                                "parcel": {
+                                    "recipient_name": (
+                                        parcel.recipient_full_name
+                                    ),
+                                    "phone_number": normalized_phone,
+                                    "room": create_display_room(parcel),
+                                    "tracking_number": (
+                                        parcel.tracking_number
+                                    ),
+                                    "ocr_confidence": parcel.confidence,
+                                },
+
+                                "match": match_result,
                             })
 
                         except (

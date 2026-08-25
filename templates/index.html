@@ -36,54 +36,103 @@
 
             {% if parcel_results %}
                 <section class="parcel-results">
-                    <h2>Parcel results</h2>
+                    <h2>Resident matches</h2>
 
                     {% for result in parcel_results %}
-                        <article
-                            class="parcel-result
-                            {% if result.success %}result-success{% else %}result-error{% endif %}"
-                        >
+                        <article class="parcel-result">
                             <h3>{{ result.filename }}</h3>
 
-                            {% if result.success %}
-                                <dl class="result-details">
-                                    <div>
-                                        <dt>Recipient</dt>
-                                        <dd>
-                                            {{ result.recipient_name or "Not detected" }}
-                                        </dd>
-                                    </div>
+                            {% if not result.success %}
+                                <div class="result-error">
+                                    {{ result.error }}
+                                </div>
 
-                                    <div>
-                                        <dt>Phone</dt>
-                                        <dd>
-                                            {{ result.phone_number or "Not detected" }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt>Room</dt>
-                                        <dd>
-                                            {{ result.room or "Not detected" }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt>Tracking number</dt>
-                                        <dd>
-                                            {{ result.tracking_number or "Not detected" }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt>OCR confidence</dt>
-                                        <dd>
-                                            {{ result.confidence|title }}
-                                        </dd>
-                                    </div>
-                                </dl>
                             {% else %}
-                                <p>{{ result.error }}</p>
+                                <div class="detected-details">
+                                    <h4>Detected parcel information</h4>
+
+                                    <dl class="result-details">
+                                        <div>
+                                            <dt>Name</dt>
+                                            <dd>
+                                                {{ result.parcel.recipient_name
+                                                   or "Not detected" }}
+                                            </dd>
+                                        </div>
+
+                                        <div>
+                                            <dt>Phone</dt>
+                                            <dd>
+                                                {{ result.parcel.phone_number
+                                                   or "Not detected" }}
+                                            </dd>
+                                        </div>
+
+                                        <div>
+                                            <dt>Room</dt>
+                                            <dd>
+                                                {{ result.parcel.room
+                                                   or "Not detected" }}
+                                            </dd>
+                                        </div>
+
+                                        <div>
+                                            <dt>OCR confidence</dt>
+                                            <dd>
+                                                {{ result.parcel.ocr_confidence|title }}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
+
+                                <div class="match-section">
+                                    <span class="status-badge status-{{ result.match.status }}">
+                                        {{ result.match.status
+                                           |replace("_", " ")
+                                           |title }}
+                                    </span>
+
+                                    <p class="match-reason">
+                                        {{ result.match.reason }}
+                                    </p>
+
+                                    {% if result.match.resident %}
+                                        <dl class="result-details resident-details">
+                                            <div>
+                                                <dt>Resident</dt>
+                                                <dd>
+                                                    {{ result.match.resident.full_name }}
+                                                </dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Student ID</dt>
+                                                <dd>
+                                                    {{ result.match.resident.student_id }}
+                                                </dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Registered room</dt>
+                                                <dd>
+                                                    {{ result.match.resident.room }}
+                                                </dd>
+                                            </div>
+                                        </dl>
+                                    {% endif %}
+
+                                    {% if result.match.evidence %}
+                                        <details class="match-evidence">
+                                            <summary>Why was this suggested?</summary>
+
+                                            <ul>
+                                                {% for item in result.match.evidence %}
+                                                    <li>{{ item }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </details>
+                                    {% endif %}
+                                </div>
                             {% endif %}
                         </article>
                     {% endfor %}
