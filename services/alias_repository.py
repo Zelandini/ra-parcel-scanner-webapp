@@ -3,6 +3,7 @@ import re
 
 from firebase_admin import firestore
 from google.api_core.exceptions import AlreadyExists
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 from services.firestore_client import get_firestore_database
 from services.resident_matcher import normalize_name
@@ -97,3 +98,45 @@ def save_alias(
         "id": document_id,
         **alias_document,
     }
+
+def find_active_alias_resident_ids(alias):
+    """
+    Return resident IDs connected to an active, normalized alias.
+
+    More than one ID is returned when the same alias belongs to
+    multiple residents, allowing the caller to avoid unsafe automatic
+    confirmation.
+    """
+    normalized_alias = normalize_name(alias)
+
+    if not normalized_alias:
+        return []
+
+    database = get_firestore_database()
+
+    documents = (
+        database
+        .collection("aliases")
+        .where(
+            filter=FieldFilter(
+                "normalized_alias",
+                "==",
+                normalized_alias,
+            )
+        )
+        .stream()
+    )
+
+    resident_ids = {
+        str(document_data.get("resident_id", "")).strip()
+        for document in documents
+        for document_data in [document.to_dict() or {}]
+        if (
+            document_data.get("active") is True
+            and str(
+                document_data.get("resident_id", "")
+            ).strip()
+        )
+    }
+
+    return sorted(resident_ids)

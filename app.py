@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from flask import (
     Flask,
     abort,
+    flash,
     jsonify,
     redirect,
     render_template,
@@ -20,7 +21,12 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from PIL import UnidentifiedImageError
 
-from services.alias_repository import save_alias
+from services.alias_repository import (
+    AliasAlreadyExistsError,
+    InvalidAliasError,
+    find_active_alias_resident_ids,
+    save_alias,
+)
 from services.image_processing import prepare_uploaded_image
 from services.parcel_reader import read_parcel
 from services.resident_matcher import (
@@ -39,6 +45,10 @@ app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = (
+    os.getenv("APP_ENV", "development").lower()
+    == "production"
+)
 
 csrf = CSRFProtect(app)
 
@@ -101,6 +111,64 @@ def create_display_room(parcel):
         room = f"{parcel.building_number}-{room}"
 
     return room
+
+
+def find_saved_alias_match(detected_name):
+    """
+    Return a confirmed match only when one active Firestore alias
+    identifies exactly one current resident.
+    """
+    try:
+        resident_ids = find_active_alias_resident_ids(
+            detected_name
+        )
+
+    except Exception:
+        app.logger.exception(
+            "Saved aliases could not be searched."
+        )
+        return None
+
+    if len(resident_ids) != 1:
+        return None
+
+    resident = get_resident_by_student_id(
+        resident_ids[0]
+    )
+
+    if not resident:
+        app.logger.warning(
+            "Saved alias points to missing resident ID %s.",
+            resident_ids[0],
+        )
+        return None
+
+    return {
+        "status": "confirmed",
+        "detected_name": detected_name,
+        "reason": "Matched using a saved resident alias.",
+        "resident": resident,
+        "surname_match_type": "saved_alias",
+        "scores": {
+            "alias": 100.0,
+            "total": 100.0,
+        },
+        "evidence": [
+            "saved alias matched exactly",
+        ],
+        "candidates": [
+            {
+                "resident": resident,
+                "scores": {
+                    "alias": 100.0,
+                    "total": 100.0,
+                },
+                "evidence": [
+                    "saved alias matched exactly",
+                ],
+            }
+        ],
+    }
 
 
 def login_required(view_function):
@@ -288,22 +356,27 @@ def home():
                             )
 
                             if parcel.recipient_full_name:
-                                match_result = search_csv(
-                                    search_name=(
+                                match_result = (
+                                    find_saved_alias_match(
                                         parcel.recipient_full_name
-                                    ),
-                                    building_number=(
-                                        parcel.building_number
-                                    ),
-                                    room_number=(
-                                        parcel.room_number
-                                    ),
-                                    room_letter=(
-                                        parcel.room_letter
-                                    ),
-                                    phone_number=(
-                                        normalized_phone
-                                    ),
+                                    )
+                                    or search_csv(
+                                        search_name=(
+                                            parcel.recipient_full_name
+                                        ),
+                                        building_number=(
+                                            parcel.building_number
+                                        ),
+                                        room_number=(
+                                            parcel.room_number
+                                        ),
+                                        room_letter=(
+                                            parcel.room_letter
+                                        ),
+                                        phone_number=(
+                                            normalized_phone
+                                        ),
+                                    )
                                 )
 
                             else:
@@ -397,22 +470,29 @@ def home():
                                 ),
                             })
 
-                        except Exception as gemini_error:
+                        except Exception:
+                            app.logger.exception(
+                                "Parcel processing failed for %s.",
+                                image.filename,
+                            )
+
                             parcel_results.append({
                                 "filename": image.filename,
                                 "success": False,
                                 "error": (
-                                    "Gemini could not process "
-                                    "this image: "
-                                    f"{gemini_error}"
+                                    "This image could not be processed. "
+                                    "Please try again."
                                 ),
                             })
 
-            except Exception as connection_error:
+            except Exception:
+                app.logger.exception(
+                    "The parcel-processing service could not start."
+                )
+
                 error = (
-                    "The Gemini service could not "
-                    "be started: "
-                    f"{connection_error}"
+                    "The parcel-processing service is temporarily "
+                    "unavailable. Please try again."
                 )
 
     return render_template(
@@ -448,37 +528,65 @@ def create_alias():
     if not resident:
         abort(404)
 
-    official_name = normalize_name(
-        resident.get("full_name")
-    )
-
-    legal_name = normalize_name(
-        resident.get("legal_full_name")
-    )
-
     normalized_alias = normalize_name(alias)
 
-    if not normalized_alias:
-        abort(400)
+    official_names = {
+        normalize_name(
+            resident.get("full_name")
+        ),
+        normalize_name(
+            resident.get("legal_full_name")
+        ),
+    }
 
-    if normalized_alias in {
-        official_name,
-        legal_name,
-    }:
-        return redirect(
-            url_for("home", alias_saved="1")
+    if not normalized_alias:
+        flash(
+            "The parcel name was empty or invalid.",
+            "error",
+        )
+        return redirect(url_for("home"))
+
+    if normalized_alias in official_names:
+        flash(
+            "This is already the resident's registered name.",
+            "warning",
+        )
+        return redirect(url_for("home"))
+
+    try:
+        save_alias(
+            alias=alias,
+            resident=resident,
+            created_by_sub=session["google_sub"],
+            created_by_email=session["email"],
         )
 
-    save_alias(
-        alias=alias,
-        resident=resident,
-        created_by_sub=session["google_sub"],
-        created_by_email=session["email"],
-    )
+    except AliasAlreadyExistsError:
+        flash(
+            "This alias is already saved for that resident.",
+            "warning",
+        )
 
-    return redirect(
-        url_for("home", alias_saved="1")
-    )
+    except InvalidAliasError as error:
+        flash(str(error), "error")
+
+    except Exception:
+        app.logger.exception(
+            "The resident alias could not be saved."
+        )
+
+        flash(
+            "The alias could not be saved. Please try again.",
+            "error",
+        )
+
+    else:
+        flash(
+            "The resident alias was saved successfully.",
+            "success",
+        )
+
+    return redirect(url_for("home"))
 
 
 @app.errorhandler(413)
@@ -495,4 +603,9 @@ def upload_too_large(_error):
 
 
 if __name__ == "__main__":
-    app.run(port=5001)
+    port = int(os.getenv("PORT", "5001"))
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+    )
