@@ -118,9 +118,16 @@ def find_saved_alias_match(detected_name):
     Return a confirmed match only when one active Firestore alias
     identifies exactly one current resident.
     """
-    resident_ids = find_active_alias_resident_ids(
-        detected_name
-    )
+    try:
+        resident_ids = find_active_alias_resident_ids(
+            detected_name
+        )
+
+    except Exception:
+        app.logger.exception(
+            "Saved aliases could not be searched."
+        )
+        return None
 
     if len(resident_ids) != 1:
         return None
