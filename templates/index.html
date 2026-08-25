@@ -152,55 +152,56 @@
 
                                     {% if result.match.evidence %}
                                         <details class="match-evidence">
-                                            <summary>Why was this suggested?</summary>
+                                            <summary>
+                                                Why was this suggested?
+                                            </summary>
 
                                             <ul>
                                                 {% for item in result.match.evidence %}
                                                     <li>{{ item }}</li>
                                                 {% endfor %}
-                                                {% if (
-                                                    result.can_save_alias
-                                                ) %}
-                                                    <form
-                                                        class="alias-form"
-                                                        method="POST"
-                                                        action="{{ url_for('create_alias') }}"
-                                                    >
-                                                        <input
-                                                            type="hidden"
-                                                            name="csrf_token"
-                                                            value="{{ csrf_token() }}"
-                                                        >
-
-                                                        <input
-                                                            type="hidden"
-                                                            name="resident_id"
-                                                            value="{{ result.match.resident.student_id }}"
-                                                        >
-
-                                                        <input
-                                                            type="hidden"
-                                                            name="alias"
-                                                            value="{{ result.parcel.recipient_name }}"
-                                                        >
-
-                                                        <p>
-                                                            Does this parcel name belong to
-                                                            <strong>
-                                                                {{ result.match.resident.full_name }}
-                                                            </strong>?
-                                                        </p>
-
-                                                        <button
-                                                            class="remember-alias-button"
-                                                            type="submit"
-                                                        >
-                                                            Remember as alias
-                                                        </button>
-                                                    </form>
-                                                {% endif %}
                                             </ul>
                                         </details>
+                                    {% endif %}
+
+                                    {% if result.can_save_alias %}
+                                        <form
+                                            class="alias-form"
+                                            method="POST"
+                                            action="{{ url_for('create_alias') }}"
+                                        >
+                                            <input
+                                                type="hidden"
+                                                name="csrf_token"
+                                                value="{{ csrf_token() }}"
+                                            >
+
+                                            <input
+                                                type="hidden"
+                                                name="resident_id"
+                                                value="{{ result.match.resident.student_id }}"
+                                            >
+
+                                            <input
+                                                type="hidden"
+                                                name="alias"
+                                                value="{{ result.parcel.recipient_name }}"
+                                            >
+
+                                            <p>
+                                                Does this parcel name belong to
+                                                <strong>
+                                                    {{ result.match.resident.full_name }}
+                                                </strong>?
+                                            </p>
+
+                                            <button
+                                                class="remember-alias-button"
+                                                type="submit"
+                                            >
+                                                Remember as alias
+                                            </button>
+                                        </form>
                                     {% endif %}
                                 </div>
                             {% endif %}
