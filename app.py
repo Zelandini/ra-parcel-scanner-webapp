@@ -1,7 +1,23 @@
+import os
+import secrets
+from functools import wraps
+from pathlib import Path
+from flask import (
+    Flask,
+    abort,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
+
 from tempfile import TemporaryDirectory
 
 from dotenv import load_dotenv
-from flask import Flask, render_template, request
 from google import genai
 from PIL import UnidentifiedImageError
 
@@ -14,6 +30,28 @@ from services.resident_matcher import (normalize_phone, search_csv)
 load_dotenv()
 
 app = Flask(__name__)
+
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+
+APPROVED_RA_EMAILS = {
+    email.strip().lower()
+    for email in os.getenv(
+        "APPROVED_RA_EMAILS",
+        "",
+    ).split(",")
+    if email.strip()
+}
+
+if not app.config["SECRET_KEY"]:
+    raise RuntimeError("FLASK_SECRET_KEY is not configured.")
+
+if not GOOGLE_CLIENT_ID:
+    raise RuntimeError("GOOGLE_CLIENT_ID is not configured.")
 
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 
@@ -56,7 +94,113 @@ def create_display_room(parcel):
     return room
 
 
+def login_required(view_function):
+    @wraps(view_function)
+    def wrapped_view(*args, **kwargs):
+        if "google_sub" not in session:
+            return redirect(url_for("login"))
+
+        return view_function(*args, **kwargs)
+
+    return wrapped_view
+
+
+@app.route("/login")
+def login():
+    if "google_sub" in session:
+        return redirect(url_for("home"))
+
+    login_csrf_token = secrets.token_urlsafe(32)
+    session["login_csrf_token"] = login_csrf_token
+
+    return render_template(
+        "login.html",
+        google_client_id=GOOGLE_CLIENT_ID,
+        login_csrf_token=login_csrf_token,
+    )
+
+
+@app.route("/auth/google", methods=["POST"])
+def google_login():
+    submitted_data = request.get_json(silent=True) or {}
+
+    submitted_csrf_token = submitted_data.get(
+        "csrf_token",
+        "",
+    )
+
+    saved_csrf_token = session.pop(
+        "login_csrf_token",
+        "",
+    )
+
+    if (
+        not submitted_csrf_token
+        or not saved_csrf_token
+        or not secrets.compare_digest(
+            submitted_csrf_token,
+            saved_csrf_token,
+        )
+    ):
+        return jsonify({
+            "error": "The login request could not be verified."
+        }), 400
+
+    credential = submitted_data.get("credential")
+
+    if not credential:
+        return jsonify({
+            "error": "Google did not provide a login credential."
+        }), 400
+
+    try:
+        google_user = id_token.verify_oauth2_token(
+            credential,
+            google_requests.Request(),
+            GOOGLE_CLIENT_ID,
+        )
+
+    except ValueError:
+        return jsonify({
+            "error": "Google could not verify this login."
+        }), 401
+
+    email = str(
+        google_user.get("email", "")
+    ).strip().lower()
+
+    if not email or not google_user.get("email_verified"):
+        return jsonify({
+            "error": "The Google email is not verified."
+        }), 403
+
+    if email not in APPROVED_RA_EMAILS:
+        return jsonify({
+            "error": "This Google account is not approved."
+        }), 403
+
+    session.clear()
+
+    session["google_sub"] = google_user["sub"]
+    session["email"] = email
+    session["name"] = (
+        google_user.get("name")
+        or email
+    )
+    session["picture"] = google_user.get("picture")
+
+    return jsonify({
+        "redirect": url_for("home")
+    })
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
 @app.route("/", methods=["GET", "POST"])
+@login_required
 def home():
     error = None
     parcel_results = []
@@ -184,4 +328,4 @@ def upload_too_large(_error):
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(port=5001)

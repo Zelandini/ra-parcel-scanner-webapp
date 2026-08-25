@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/styles.css') }}"
+    >
+
+    <script
+        src="https://accounts.google.com/gsi/client"
+        async
+    ></script>
+
+    <title>Sign in · ParcelMatch</title>
+</head>
+
+<body>
+    <main class="page">
+        <section class="scanner-card login-card">
+            <p class="eyebrow">Authorised access</p>
+
+            <h1 class="product-name">ParcelMatch</h1>
+
+            <p class="description">
+                Sign in using your approved Google account to access the
+                parcel scanner.
+            </p>
+
+            <div
+                id="g_id_onload"
+                data-client_id="{{ google_client_id }}"
+                data-callback="handleCredentialResponse"
+                data-auto_prompt="false"
+            ></div>
+
+            <div
+                class="g_id_signin google-button"
+                data-type="standard"
+                data-shape="rectangular"
+                data-theme="outline"
+                data-text="signin_with"
+                data-size="large"
+                data-logo_alignment="left"
+                data-width="300"
+            ></div>
+
+            <p
+                id="login-error"
+                class="login-error"
+                role="alert"
+                hidden
+            ></p>
+
+            <p class="login-help">
+                Access is limited to approved Resident Advisors.
+            </p>
+        </section>
+    </main>
+
+    <script>
+        const loginCsrfToken = {{ login_csrf_token|tojson }};
+        const googleLoginUrl = {{ url_for("google_login")|tojson }};
+
+        async function handleCredentialResponse(googleResponse) {
+            const errorElement = document.querySelector("#login-error");
+
+            errorElement.hidden = true;
+            errorElement.textContent = "";
+
+            try {
+                const response = await fetch(googleLoginUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        credential: googleResponse.credential,
+                        csrf_token: loginCsrfToken
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    errorElement.textContent =
+                        result.error || "Google login failed.";
+
+                    errorElement.hidden = false;
+                    return;
+                }
+
+                window.location.href = result.redirect;
+
+            } catch (error) {
+                errorElement.textContent =
+                    "ParcelMatch could not complete the login.";
+
+                errorElement.hidden = false;
+            }
+        }
+    </script>
+</body>
+</html>

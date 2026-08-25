@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/styles.css') }}"
+    >
+
+    <title>Access denied · ParcelMatch</title>
+</head>
+
+<body>
+    <main class="page">
+        <section class="scanner-card login-card">
+            <p class="eyebrow">Access denied</p>
+
+            <h1 class="product-name">Account not approved</h1>
+
+            <p class="description">
+                The Google account {{ email }} is not authorised to use
+                ParcelMatch.
+            </p>
+
+            <a class="text-link" href="{{ url_for('login') }}">
+                Try another account
+            </a>
+        </section>
+    </main>
+</body>
+</html>

@@ -344,3 +344,71 @@ body {
     margin-bottom: 0;
     padding-left: 20px;
 }
+.login-card {
+    text-align: center;
+}
+
+.google-button {
+    display: flex;
+    justify-content: center;
+}
+
+.login-help {
+    margin: 20px 0 0;
+
+    color: #758179;
+    font-size: 0.75rem;
+}
+
+.user-bar {
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    border-bottom: 1px solid #dce4df;
+}
+
+.user-bar > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.user-label {
+    color: #758179;
+    font-size: 0.7rem;
+}
+
+.logout-button {
+    padding: 8px 12px;
+
+    border: 1px solid #c8d3cd;
+    border-radius: 8px;
+
+    background-color: white;
+    color: #526159;
+
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.text-link {
+    color: #176b4d;
+    font-weight: 700;
+}
+.login-error {
+    margin: 18px 0 0;
+    padding: 10px 12px;
+
+    border: 1px solid #e5a5a5;
+    border-radius: 8px;
+
+    background-color: #fff1f1;
+    color: #932e2e;
+
+    font-size: 0.8rem;
+}

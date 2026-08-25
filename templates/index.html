@@ -18,6 +18,18 @@
 
 <body>
     <main class="page">
+    <div class="user-bar">
+        <div>
+            <span class="user-label">Signed in as</span>
+            <strong>{{ session.name }}</strong>
+        </div>
+
+        <form method="POST" action="{{ url_for('logout') }}">
+            <button class="logout-button" type="submit">
+                Sign out
+            </button>
+        </form>
+    </div>
         <section class="scanner-card">
             <p class="eyebrow">Parcel intake</p>
 
