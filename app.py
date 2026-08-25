@@ -24,9 +24,14 @@ from PIL import UnidentifiedImageError
 
 from services.alias_repository import (
     AliasAlreadyExistsError,
+    AliasNotFoundError,
     InvalidAliasError,
+    deactivate_alias,
     find_active_alias_resident_ids,
     get_active_aliases_for_resident,
+    get_alias,
+    list_active_aliases,
+    replace_alias,
     save_alias,
 )
 from services.batch_repository import (
@@ -479,6 +484,118 @@ def batches_dashboard():
         "dashboard.html",
         batches=batches,
     )
+
+
+@app.route("/aliases")
+@login_required
+def aliases_manager():
+    try:
+        aliases = list_active_aliases()
+
+        for alias in aliases:
+            alias["resident"] = get_resident_by_student_id(
+                alias["resident_id"]
+            )
+
+    except Exception:
+        app.logger.exception("The alias manager could not load.")
+        aliases = []
+        flash("Resident aliases could not be loaded.", "error")
+
+    return render_template(
+        "aliases.html",
+        aliases=aliases,
+    )
+
+
+@app.route("/aliases/add", methods=["POST"])
+@login_required
+def add_managed_alias():
+    resident_id = request.form.get("resident_id", "").strip()
+    alias = request.form.get("alias", "").strip()
+    resident = get_resident_by_student_id(resident_id)
+
+    if not resident:
+        flash("Choose a valid resident first.", "error")
+        return redirect(url_for("aliases_manager"))
+
+    try:
+        save_alias(
+            alias=alias,
+            resident=resident,
+            created_by_sub=session["google_sub"],
+            created_by_email=session["email"],
+        )
+    except AliasAlreadyExistsError:
+        flash("That alias is already active for this resident.", "warning")
+    except InvalidAliasError as error:
+        flash(str(error), "error")
+    except Exception:
+        app.logger.exception("A managed alias could not be added.")
+        flash("The alias could not be added.", "error")
+    else:
+        flash("The resident alias was added.", "success")
+
+    return redirect(url_for("aliases_manager"))
+
+
+@app.route("/aliases/<alias_id>/edit", methods=["POST"])
+@login_required
+def edit_managed_alias(alias_id):
+    new_alias = request.form.get("new_alias", "").strip()
+
+    try:
+        existing = get_alias(alias_id)
+        resident = get_resident_by_student_id(
+            existing.get("resident_id")
+        )
+
+        if not resident:
+            raise InvalidAliasError(
+                "The alias resident could not be found."
+            )
+
+        replace_alias(
+            alias_id=alias_id,
+            new_alias=new_alias,
+            resident=resident,
+            changed_by_sub=session["google_sub"],
+            changed_by_email=session["email"],
+        )
+    except AliasAlreadyExistsError:
+        flash("That replacement alias already exists.", "warning")
+    except (AliasNotFoundError, InvalidAliasError) as error:
+        flash(str(error), "error")
+    except Exception:
+        app.logger.exception("A managed alias could not be edited.")
+        flash("The alias could not be edited.", "error")
+    else:
+        flash("The resident alias was updated.", "success")
+
+    return redirect(url_for("aliases_manager"))
+
+
+@app.route("/aliases/<alias_id>/deactivate", methods=["POST"])
+@login_required
+def deactivate_managed_alias(alias_id):
+    try:
+        deactivate_alias(
+            alias_id=alias_id,
+            changed_by_sub=session["google_sub"],
+            changed_by_email=session["email"],
+        )
+    except AliasNotFoundError as error:
+        flash(str(error), "warning")
+    except Exception:
+        app.logger.exception("A managed alias could not be deactivated.")
+        flash("The alias could not be removed.", "error")
+    else:
+        flash(
+            "The alias was removed from future matching.",
+            "success",
+        )
+
+    return redirect(url_for("aliases_manager"))
 
 
 @app.route("/batches/<batch_id>")
