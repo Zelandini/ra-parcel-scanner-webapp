@@ -527,6 +527,7 @@ a {
 
 .user-actions {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: flex-end;
     gap: 10px;
@@ -697,19 +698,19 @@ a {
     font-weight: 750;
 }
 
-.status-waiting {
+.upload-waiting {
     color: #758179;
 }
 
-.status-processing {
+.upload-processing {
     color: #765400;
 }
 
-.status-ready {
+.upload-ready {
     color: #176b4d;
 }
 
-.status-failed,
+.upload-failed,
 .danger-text {
     color: #932e2e;
 }
