@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/styles.css') }}"
+    >
+    <title>Resident aliases · ParcelMatch</title>
+</head>
+<body>
+    <main class="app-shell desktop-shell">
+        {% include "_user_bar.html" %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="message flash-{{ category }}" role="status">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endwith %}
+
+        <section class="alias-manager-header">
+            <div>
+                <p class="eyebrow">Matching controls</p>
+                <h1>Resident aliases</h1>
+                <p class="description">
+                    Review the alternative names used during parcel matching.
+                    Every change requires confirmation.
+                </p>
+            </div>
+        </section>
+
+        <section class="alias-add-card">
+            <div>
+                <p class="eyebrow">New alias</p>
+                <h2>Add an alias carefully</h2>
+            </div>
+
+            <form
+                id="add-alias-form"
+                class="alias-manager-form"
+                method="POST"
+                action="{{ url_for('add_managed_alias') }}"
+                data-alias-confirm
+                data-alias-action="save"
+            >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input id="selected-resident-id" type="hidden" name="resident_id" required>
+
+                <div
+                    class="manager-resident-search"
+                    data-search-url="{{ url_for('api_search_residents') }}"
+                >
+                    <label>
+                        Find resident
+                        <span class="resident-search-row">
+                            <input
+                                id="manager-resident-query"
+                                type="search"
+                                placeholder="Name or student ID"
+                            >
+                            <button
+                                id="manager-resident-search-button"
+                                class="secondary-button"
+                                type="button"
+                            >
+                                Search
+                            </button>
+                        </span>
+                    </label>
+                    <div id="manager-resident-results" class="resident-search-results"></div>
+                    <p id="selected-resident" class="selected-resident" hidden></p>
+                </div>
+
+                <label>
+                    Alias
+                    <input
+                        name="alias"
+                        placeholder="Alternative parcel name"
+                        minlength="2"
+                        maxlength="100"
+                        required
+                    >
+                </label>
+
+                <button class="primary-button compact-button" type="submit">
+                    Add alias
+                </button>
+            </form>
+        </section>
+
+        <section class="alias-list-section">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Active aliases</p>
+                    <h2>{{ aliases|length }} saved</h2>
+                </div>
+                <input
+                    id="alias-filter"
+                    class="alias-filter"
+                    type="search"
+                    placeholder="Filter aliases or residents"
+                >
+            </div>
+
+            <div id="managed-alias-list" class="managed-alias-list">
+                {% for alias in aliases %}
+                    <article
+                        class="managed-alias-card"
+                        data-search-text="{{ (
+                            alias.alias ~ ' '
+                            ~ (alias.resident.full_name if alias.resident else '') ~ ' '
+                            ~ alias.resident_id
+                        )|lower }}"
+                    >
+                        <div class="managed-alias-main">
+                            <span class="alias-direction-label">Parcel alias</span>
+                            <strong>{{ alias.alias }}</strong>
+                        </div>
+
+                        <span class="alias-arrow" aria-hidden="true">→</span>
+
+                        <div class="managed-resident-main">
+                            <span class="alias-direction-label">Matches resident</span>
+                            {% if alias.resident %}
+                                <strong>{{ alias.resident.full_name }}</strong>
+                                <span>
+                                    {{ alias.resident.student_id }} ·
+                                    {{ alias.resident.room }}
+                                </span>
+                            {% else %}
+                                <strong>Resident unavailable</strong>
+                                <span>{{ alias.resident_id }}</span>
+                            {% endif %}
+                        </div>
+
+                        <details class="alias-card-actions">
+                            <summary>Edit or remove</summary>
+
+                            <div class="alias-action-forms">
+                                <form
+                                    class="alias-edit-form"
+                                    method="POST"
+                                    action="{{ url_for(
+                                        'edit_managed_alias',
+                                        alias_id=alias.id
+                                    ) }}"
+                                    data-alias-confirm
+                                    data-alias-action="edit"
+                                    data-alias-value="{{ alias.alias }}"
+                                    data-resident-name="{{ alias.resident.full_name if alias.resident else alias.resident_id }}"
+                                >
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <label>
+                                        Updated alias
+                                        <input
+                                            name="new_alias"
+                                            value="{{ alias.alias }}"
+                                            minlength="2"
+                                            maxlength="100"
+                                            required
+                                        >
+                                    </label>
+                                    <button class="secondary-button compact-button" type="submit">
+                                        Update alias
+                                    </button>
+                                </form>
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for(
+                                        'deactivate_managed_alias',
+                                        alias_id=alias.id
+                                    ) }}"
+                                    data-alias-confirm
+                                    data-alias-action="remove"
+                                    data-alias-value="{{ alias.alias }}"
+                                    data-resident-name="{{ alias.resident.full_name if alias.resident else alias.resident_id }}"
+                                >
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button class="danger-button compact-button" type="submit">
+                                        Remove alias
+                                    </button>
+                                </form>
+                            </div>
+                        </details>
+                    </article>
+                {% else %}
+                    <section class="empty-state">
+                        <h2>No active aliases</h2>
+                        <p>Aliases saved during parcel review will appear here.</p>
+                    </section>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+    {% include "_alias_confirmation.html" %}
+    <script src="{{ url_for('static', filename='js/alias-confirmation.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/aliases.js') }}"></script>
+</body>
+</html>

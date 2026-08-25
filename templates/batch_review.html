@@ -58,7 +58,7 @@
         <section class="review-list">
             {% for item in items %}
                 <article
-                    class="review-card"
+                    class="review-card{% if item.review_status == 'unresolved' %} review-card-unresolved{% endif %}"
                     data-review-status="{{ item.review_status }}"
                 >
                     {% if item.processing_status == "failed" %}
@@ -122,6 +122,10 @@
                                                 batch_id=batch.id,
                                                 item_id=item.id
                                             ) }}"
+                                            data-alias-confirm
+                                            data-alias-action="save"
+                                            data-alias-value="{{ item.detected.name }}"
+                                            data-resident-name="{{ item.match.resident.full_name }}"
                                         >
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="resident_id" value="{{ item.match.resident.student_id }}">
@@ -176,10 +180,20 @@
                         <header class="review-card-header action-required-header">
                             <div>
                                 <span class="filename">{{ item.filename }}</span>
-                                <strong>Human check needed</strong>
+                                <strong>
+                                    {% if item.review_status == "unresolved" %}
+                                        Unresolved — needs attention
+                                    {% else %}
+                                        Human check needed
+                                    {% endif %}
+                                </strong>
                             </div>
-                            <span class="status-badge status-{{ item.match.status }}">
-                                {{ item.match.status|replace('_', ' ')|title }}
+                            <span class="status-badge {% if item.review_status == 'unresolved' %}review-unresolved{% else %}status-{{ item.match.status }}{% endif %}">
+                                {% if item.review_status == "unresolved" %}
+                                    Unresolved
+                                {% else %}
+                                    {{ item.match.status|replace('_', ' ')|title }}
+                                {% endif %}
                             </span>
                         </header>
 
@@ -273,6 +287,10 @@
                                                 batch_id=batch.id,
                                                 item_id=item.id
                                             ) }}"
+                                            data-alias-confirm
+                                            data-alias-action="save"
+                                            data-alias-value="{{ item.detected.name }}"
+                                            data-resident-name="{{ item.match.resident.full_name }}"
                                         >
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="resident_id" value="{{ item.match.resident.student_id }}">
@@ -423,6 +441,8 @@
         </section>
     </main>
 
+    {% include "_alias_confirmation.html" %}
     <script src="{{ url_for('static', filename='js/review.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/alias-confirmation.js') }}"></script>
 </body>
 </html>
