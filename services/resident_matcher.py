@@ -560,3 +560,45 @@ def get_resident_by_student_id(student_id):
     return _resident_details(
         matching_residents.iloc[0]
     )
+
+
+def search_residents(search_text, limit=8):
+    """Return a small, safe resident search result list."""
+    raw_query = str(search_text or "").strip()
+    normalized_query = normalize_name(raw_query)
+
+    if len(normalized_query) < 2:
+        return []
+
+    residents = _load_residents(str(RESIDENTS_CSV))
+    matches = []
+
+    for index, resident in residents.iterrows():
+        student_id = str(resident.get("student_id", "")).strip()
+        names = _full_name_aliases(resident)
+
+        exact_contains = (
+            normalized_query in normalize_name(student_id)
+            or any(normalized_query in name for name in names)
+        )
+
+        fuzzy_score = max(
+            (
+                fuzz.WRatio(normalized_query, name)
+                for name in names
+            ),
+            default=0,
+        )
+
+        if exact_contains or fuzzy_score >= 75:
+            matches.append((
+                100 if exact_contains else float(fuzzy_score),
+                index,
+            ))
+
+    matches.sort(key=lambda match: match[0], reverse=True)
+
+    return [
+        _resident_details(residents.loc[index])
+        for _, index in matches[:limit]
+    ]
