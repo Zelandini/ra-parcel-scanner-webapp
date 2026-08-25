@@ -100,3 +100,41 @@ document.querySelectorAll(".resident-search").forEach((searchBox) => {
         }
     });
 });
+
+
+async function copyText(value) {
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+        return;
+    }
+
+    const temporaryInput = document.createElement("textarea");
+    temporaryInput.value = value;
+    temporaryInput.style.position = "fixed";
+    temporaryInput.style.opacity = "0";
+    document.body.append(temporaryInput);
+    temporaryInput.select();
+    document.execCommand("copy");
+    temporaryInput.remove();
+}
+
+
+document.querySelectorAll(".copy-id-button").forEach((button) => {
+    button.addEventListener("click", async () => {
+        const originalLabel = button.textContent;
+
+        try {
+            await copyText(button.dataset.studentId);
+            button.textContent = "Copied";
+            button.classList.add("is-copied");
+
+            window.setTimeout(() => {
+                button.textContent = originalLabel;
+                button.classList.remove("is-copied");
+            }, 1400);
+
+        } catch (error) {
+            button.textContent = "Copy failed";
+        }
+    });
+});
