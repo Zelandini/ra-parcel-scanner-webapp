@@ -6,8 +6,11 @@ from pathlib import Path
 import pandas as pd
 from rapidfuzz import fuzz
 
+from services.firestore_client import get_firestore_database
 
-RESIDENTS_CSV = Path("data/residents.csv")
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+RESIDENTS_CSV = PROJECT_ROOT / "data" / "residents.csv"
 MAX_CANDIDATES = 3
 FUZZY_SURNAME_THRESHOLD = 85
 PHONE_THRESHOLD = 85
@@ -68,7 +71,41 @@ def _normalize_room_letter(value):
 
 @lru_cache(maxsize=1)
 def _load_residents(csv_path):
-    return pd.read_csv(csv_path, dtype=str, keep_default_na=False)
+    """
+    Load the private local CSV during development. When the CSV is not
+    present, load the same resident records from Firestore.
+    """
+    path = Path(csv_path)
+
+    if path.exists():
+        return pd.read_csv(
+            path,
+            dtype=str,
+            keep_default_na=False,
+        )
+
+    documents = (
+        get_firestore_database()
+        .collection("residents")
+        .stream()
+    )
+
+    rows = [
+        document.to_dict() or {}
+        for document in documents
+    ]
+
+    if not rows:
+        raise RuntimeError(
+            "No resident data is available. Import the private "
+            "resident CSV into Firestore before deployment."
+        )
+
+    return (
+        pd.DataFrame(rows)
+        .fillna("")
+        .astype(str)
+    )
 
 
 def _surname(resident):
