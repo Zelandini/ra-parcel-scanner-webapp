@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "ParcelMatch StarRez",
+  "version": "0.2.0",
+  "description": "Send confirmed ParcelMatch residents to StarRez.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://auckland.starrezhousing.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

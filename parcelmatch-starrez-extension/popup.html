@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 330px;
+            padding: 16px;
+        }
+
+        h3 {
+            margin-top: 0;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #999;
+        }
+
+        .dot.ready {
+            background: #20a447;
+        }
+
+        .dot.not-ready {
+            background: #d93025;
+        }
+
+        .status-text {
+            font-size: 13px;
+        }
+
+        .ready-text {
+            color: #188038;
+            font-weight: bold;
+        }
+
+        .not-ready-text {
+            color: #d93025;
+        }
+
+        button {
+            width: 100%;
+            padding: 11px;
+            margin-top: 14px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        #result {
+            margin-top: 12px;
+            white-space: pre-line;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h3>ParcelMatch → StarRez</h3>
+
+    <div class="status-row">
+        <div class="status-left">
+            <span id="parcelDot" class="dot"></span>
+            <span>ParcelMatch</span>
+        </div>
+
+        <span
+            id="parcelStatus"
+            class="status-text"
+        >
+            Checking...
+        </span>
+    </div>
+
+
+    <div class="status-row">
+        <div class="status-left">
+            <span id="starrezDot" class="dot"></span>
+            <span>StarRez</span>
+        </div>
+
+        <span
+            id="starrezStatus"
+            class="status-text"
+        >
+            Checking...
+        </span>
+    </div>
+
+
+    <div class="status-row">
+        <div class="status-left">
+            <span id="residentsDot" class="dot"></span>
+            <span>Residents</span>
+        </div>
+
+        <span
+            id="residentsStatus"
+            class="status-text"
+        >
+            Checking...
+        </span>
+    </div>
+
+
+    <button id="sendButton" disabled>
+        Waiting...
+    </button>
+
+    <div id="result"></div>
+
+    <script src="popup.js"></script>
+
+</body>
+</html>
